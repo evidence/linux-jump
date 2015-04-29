@@ -400,7 +400,7 @@ unsigned long jia_alloc3(int size, int block, int starthost)
  
   if (!((globaladdr + size) <= Maxmemsize)) {
     sprintf(errstr, 
-      "Insufficient shared space! Max = 0x%x Left = 0x%x Need = 0x%x\n",
+      "Insufficient shared space! Max = 0x%x Left = 0x%lx Need = 0x%x\n",
        Maxmemsize, Maxmemsize - globaladdr,size);
     assert((0 == 1), errstr);
   }
@@ -543,7 +543,7 @@ void flushpage(int cachei)
   unmapyes = munmap((caddr_t)cache[cachei].addr, Pagesize);
   page[homepage(cache[cachei].addr)].state = UNMAP;
 
-  sprintf(errstr,"munmap failed at address 0x%x, errno = %d",
+  sprintf(errstr,"munmap failed at address 0x%lx, errno = %d",
          (unsigned long)cache[cachei].addr, errno);
   assert((unmapyes == 0), errstr);
 
@@ -668,9 +668,8 @@ void sigsegv_handler(int signo, struct sigcontext_struct sigctx)
 #endif
 
   faultpage = (unsigned int) homepage(faultaddr);
-  sprintf(errstr, "Access shared memory out of range from 0x%x to 0x%x!, 
-                   faultaddr = 0x%x, writefault = 0x%x", Startaddr,
-                   Startaddr + globaladdr, faultaddr, writefault);
+  sprintf(errstr, "Access shared memory out of range from 0x%x to 0x%lx!, faultaddr = 0x%lx, writefault = 0x%x", Startaddr,
+                   Startaddr + globaladdr, (unsigned long int) faultaddr, writefault);
   assert((((unsigned long)faultaddr < (Startaddr + globaladdr)) && 
          ((unsigned long)faultaddr >= Startaddr)), errstr);
 
@@ -956,7 +955,7 @@ void getpserver(jia_msg_t *req)
   index = 2 * Intbytes;
 
   /* calculate page ID */
-  pagei = (unsigned int)(paddr - Startaddr) / Pagesize;
+  pagei = (unsigned long int)(paddr - Startaddr) / Pagesize;
  
   /* grant = Maxhosts means grant home to requester 		*/
   /* (0 <= grant < Maxhosts) means not grant home, but a copy 	*/ 
@@ -1098,7 +1097,7 @@ void getpgrantserver(jia_msg_t *rep)
   addr = (address_t)stol(rep->data + datai);
 
   /* Compute page ID */
-  pagei = (unsigned int)(addr - Startaddr) / Pagesize;
+  pagei = (unsigned long int)(addr - Startaddr) / Pagesize;
 
   grant = (int)s2l(rep->data + Intbytes);
 

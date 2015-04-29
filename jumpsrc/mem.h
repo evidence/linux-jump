@@ -81,7 +81,7 @@ static char rcsid_mem_h[] = "$Id: mem.h,v 1.1 1998/03/06 05:18:11 dsm Exp $";
             protyes=mprotect((caddr_t)(argx),(size_t)(argy),argz);  	\
             if (protyes != 0) {                                        	\
               ad=(unsigned long)argx;                               	\
-              sprintf(errstr,"mprotect failed! addr=0x%x,errno=%d",ad,errno); \
+              sprintf(errstr,"mprotect failed! addr=0x%lx,errno=%d",ad,errno); \
               assert((protyes==0),errstr);                          	\
            }                                                       	\
           }
@@ -90,7 +90,7 @@ static char rcsid_mem_h[] = "$Id: mem.h,v 1.1 1998/03/06 05:18:11 dsm Exp $";
           { caddr_t mapad;						\
             mapad=mmap((caddr_t)(arg1),(size_t)(arg2),(arg3),(arg4),(arg5),(arg6)); \
             if (mapad != (caddr_t)(arg1)) {				\
-              sprintf(errstr,"mmap failed! addr=0x%x, errno=%d",(unsigned long)(arg1),errno);\
+              sprintf(errstr,"mmap failed! addr=0x%lx, errno=%d",(unsigned long)(arg1),errno);\
               assert(0,errstr);						\
             }                                                           \
           }
