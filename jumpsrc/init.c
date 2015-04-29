@@ -269,7 +269,7 @@ int startprocs(int argc, char **argv)
     }
 
     strcat(cmd, "-P");
-    sprintf(cmd, "%s%d ", cmd, Startport);
+    sprintf(cmd, "%s%ld ", cmd, Startport);
     strcat(cmd," &");
     printf("Starting CMD %s on host %s\n", cmd, hosts[hosti].name);
 #ifdef NFS
@@ -410,16 +410,16 @@ void redirstdio(int argc, char **argv)
 
   if (jia_pid != 0) {
 #ifdef NFS
-    sprintf(outfile,"debug-%d.log\0", jia_pid);
+    sprintf(outfile,"debug-%d.log", jia_pid);
 #else
-    sprintf(outfile,"debug-%d.log\0", jia_pid);
+    sprintf(outfile,"debug-%d.log", jia_pid);
 #endif
     freopen(outfile, "w", stdout);
     setbuf(stdout, NULL);
 #ifdef NFS
-    sprintf(outfile, "debug-%d.err\0", jia_pid);
+    sprintf(outfile, "debug-%d.err", jia_pid);
 #else
-    sprintf(outfile, "debug-%d.err\0", jia_pid);
+    sprintf(outfile, "debug-%d.err", jia_pid);
 #endif
     freopen(outfile, "w", stderr);
     setbuf(stderr, NULL);
