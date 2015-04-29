@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo Usage: To compile a JUMP DSM application written in C
+echo        and put it into your working root directory
+echo e.g. : compile merge
+
+gcc -o $1 $1.c -L../jumplib -ljia
+mv $1 ~
