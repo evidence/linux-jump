@@ -69,7 +69,7 @@ extern void disable_sigio();
 extern void enable_sigio();       
 extern unsigned long jia_current_time();
 
-int getline(int *wordc, char wordv[Maxwords][Wordsize]);
+int jump_getline(int *wordc, char wordv[Maxwords][Wordsize]);
 void gethosts();
 int  mypid();
 void copyfiles(int argc, char **argv);
@@ -95,7 +95,7 @@ int jia_lock_index;
 jiastat_t jiastat;
 #endif
 
-int getline(int *wordc, char wordv[Maxwords][Wordsize])
+int jump_getline(int *wordc, char wordv[Maxwords][Wordsize])
 {
   char line[Linesize];
   int ch;
@@ -158,7 +158,7 @@ void gethosts()
   hostc = 0;
   linec = 0;
   while (!endoffile) {
-    endoffile = getline(&wordc, wordv);
+    endoffile = jump_getline(&wordc, wordv);
     linec++;
     sprintf(errstr, "Line %4d: incorrect host specification!", linec);
     assert0(((wordc == Wordnum) || (wordc == 0)), errstr);
