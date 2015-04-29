@@ -99,7 +99,7 @@ static char rcsid_global_h[] = "$Id: global.h,v 1.1 1998/03/06 05:21:04 dsm Exp 
 
 #ifdef LINUX
 #include        <sys/fcntl.h>
-#include        <asm/sigcontext.h>
+// #include        <asm/sigcontext.h>
 #include        <asm/mman.h> 
 #endif         
 
