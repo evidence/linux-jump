@@ -487,7 +487,7 @@ void getpage(address_t addr, int writeflag)
   homeid = homehost(addr);
 
 #ifdef MHPDEBUG
-  assert((homeid! = jia_pid), "This should not have happened (2)");
+  assert((homeid != jia_pid), "This should not have happened (2)");
 #endif
 
   req = newmsg();
