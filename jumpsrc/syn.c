@@ -57,8 +57,6 @@
  *
  **********************************************************************/
 
-static char rcsid_syn_c[] = "$Id: syn.c,v 1.2 1998/03/06 05:19:51 dsm Exp $";
-
 #ifndef NULL_LIB
 #include "global.h"
 #include "init.h"
@@ -82,6 +80,10 @@ extern short int head, head2, head3, tail, tail2, tail3;
 extern short int pendprev[Maxmempages], pendnext[Maxmempages];
 extern short int pendprev2[Maxmempages], pendnext2[Maxmempages];
 extern short int pendprev3[Cachepages], pendnext3[Cachepages];
+extern void disable_sigio();
+extern void enable_sigio();
+extern void appendmsg(jia_msg_t *msg, const void *str, int len);
+extern void senddiffs();
 
 int magicflag, magicno, magicarray[Maxmempages];
 int magicwtnt[Maxmempages], magicoffset[Maxmempages];
@@ -166,7 +168,7 @@ unsigned int t[70], b[70], s[70], c[70];
 
 void initsyn()
 {
-  int i, j, k;
+  int i, j;
 
   sigflag = 1; alarming = 0; alarmdisabled = 0; 
   for (i = 0; i <= Maxlocks + Maxcondvs; i++) {
@@ -569,7 +571,7 @@ void jia_wait()
 
 void savecontext(int synop)
 {
-  register int cachei, pagei, hpages;
+  register int cachei, pagei;
   int hosti, tmp, tmp3[Cachepages], tmp3a[Cachepages];
   int locallock, i, count, counta;
 
@@ -908,7 +910,7 @@ void savecontext(int synop)
 
 void pushstack(int lock)
 {
-  int j, k, oldlock, locallock, wtnti;
+  int oldlock, locallock, wtnti;
   wtnt_t *wnptr;
 
 #ifdef JT
@@ -953,7 +955,6 @@ void pushstack(int lock)
 
 void popstack(int lock)
 {
-  int j, k;
   int wtnti, locallock, oldlock;
   wtnt_t *wnptr;
 
@@ -1067,7 +1068,6 @@ void acquire(int lock)
 
 void sendwtnts(int operation)
 {
-  int wtnti;
   jia_msg_t *req;
   wtnt_t *wnptr; 
   int i, p;
@@ -1179,8 +1179,7 @@ void readwtnt(wtnt_t *ptr, int arg1)
 
 void savewtnt(wtnt_t *ptr, int pagei, int frompid)
 {
-  int wtnti;
-  int exist, counter, i;
+  int exist, i;
   wtnt_t *wnptr;
 
 #ifdef JT
@@ -1229,7 +1228,6 @@ void savewtnt(wtnt_t *ptr, int pagei, int frompid)
 
 wtnt_t *copystackwtnts(jia_msg_t *msg, wtnt_t *ptr)
 {
-  int wtnti;
   int full;
   wtnt_t *wnptr;
 
@@ -1411,9 +1409,7 @@ void acqfwdserver(jia_msg_t *req)
 void acqserver(jia_msg_t *req)
 {
   long lock, from;
-  int wtnti;
   jia_msg_t *rep;
-  wtnt_t *wnptr;
 
 #ifdef JT
   register unsigned int x1, x2;
@@ -1664,7 +1660,7 @@ void wtntserver(jia_msg_t *req)
 
 void invalidate(jia_msg_t *req)
 {
-  int cachei, seti;
+  int cachei;
   int lock;
   int datai;
   address_t addr;

@@ -60,8 +60,6 @@
  *
  **********************************************************************/
 
-static char rcsid_comm_c[] = "$Id: comm.c,v 1.3 1998/03/06 09:33:05 dsm Exp $";
-
 #ifndef NULL_LIB
 #include "comm.h"
 #include "mem.h"
@@ -348,15 +346,11 @@ void initcomm()
 }
 
 
+void acqfwdserver(jia_msg_t *req);
+
 /*----------------------------------------------------------*/
 void msgserver()
 {
-     char msgname[21][15] = {
-	  "DIFF", "DIFFGRANT", "GETP", "GETPGRANT", 
-	  "ACQ", "ACQGRANT", "INVLD", "BARR",
-	  "BARRGRANT", "REL", "WTNT", "JIAEXIT",
-	  "WAIT", "WAITGRANT", "SETCV", "RESETCV", "WAITCV",
-	  "CVGRANT", "STAT", "STATGRANT", "ERRMSG" };
 
      switch (inqh.op) {
              case REL:       relserver(&inqh);       break;
@@ -401,14 +395,13 @@ void sigio_handler()
 void sigio_handler()
 #endif
 {
-  int res, len, oldindex;
-  int i, s, recv_time;
+  int res;
+  int i;
+  socklen_t s;
   fd_set readfds;
   struct sockaddr_in from, to; 
   sigset_t set, oldset;
   int servemsg;
-  int testresult;
-  int reenable;
 
 #ifdef DOSTAT
   register unsigned int begin;
@@ -467,7 +460,7 @@ void sigio_handler()
           res = sendto(commrep.snd_fds[i], (char *)&(inqt.seqno),
 		sizeof(inqt.seqno), 0, (struct sockaddr *)&to, sizeof(to));
           assert0((res != -1), "sigio_handler()-->sendto() ACK");
-	  if (inqt.seqno>commreq.rcv_seq[i]) {
+	  if (inqt.seqno > ((signed) commreq.rcv_seq[i])) {
 
 #ifdef DOSTAT
             if (inqt.frompid != inqt.topid) {
@@ -531,7 +524,6 @@ void sigio_handler()
 void asendmsg(jia_msg_t *msg)
 {
   int outsendmsg;
-  int sent = 0;
 
 #ifdef DOSTAT
   register unsigned int begin = get_usecs();
@@ -550,7 +542,6 @@ void asendmsg(jia_msg_t *msg)
 
   while(outsendmsg == 1) {
     outsend();
-    sent = 1;
     BEGINCS;
     outhead = (outhead + 1) % Maxqueue;
     outcount--;
@@ -572,10 +563,10 @@ void outsend()
   int retries_num;
   unsigned long start, end, mytimeout;
   int msgsize;
-  int s;
+  socklen_t s;
   int sendsuccess,arrived;
   fd_set readfds;
-  int servemsg, shoe;
+  int servemsg;
 
   if (msgprint == 1) printmsg(&outqh, 0);
 
@@ -657,7 +648,7 @@ recv_again:
         BEGINCS;
         s= sizeof(from);
         res = recvfrom(commrep.rcv_fds[toproc], (char *)&rep, Intbytes,0,
-                      (struct sockaddr *)&from,&s);
+                      (struct sockaddr *)&from, &s);
         ENDCS;
         if ((res < 0) && (errno == EINTR))
         {   printf("Hang up? when recv from %d, res = %d\n", toproc, res);

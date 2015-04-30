@@ -54,8 +54,6 @@
 #ifndef	JIAGLOBAL_H
 #define	JIAGLOBAL_H
 
-static char rcsid_global_h[] = "$Id: global.h,v 1.1 1998/03/06 05:21:04 dsm Exp $";
-
 #include        <stdio.h>
 #include        <stdlib.h>
 #include        <memory.h>

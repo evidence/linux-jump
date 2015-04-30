@@ -8,7 +8,9 @@ CC  = gcc
 CCC = gcc
 
 SRC	= ../jumpsrc 
-CFLAGS	= -I./${SRC} $(ARCH_FLAGS) -Wall -Wextra
+
+# Add -DNFS to CFLAGS to enable NFS
+CFLAGS	= -I./${SRC} $(ARCH_FLAGS) -Wall -Wextra 
 OBJS 	= comm.o init.o mem.o syn.o tools.o exit.o
 
 VPATH   = ./$(SRC)

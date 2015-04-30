@@ -48,8 +48,6 @@
 #ifndef JIA_PUBLIC
 #define	JIA_PUBLIC
 
-static char rcsid_jia_h[] = "$Id: jia.h,v 1.0 1998/02/19 06:35:20 rasit Exp $";
-
 #ifndef Maxhosts
 #define Maxhosts   16
 #endif 

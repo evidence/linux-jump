@@ -48,8 +48,6 @@
 #ifndef JIASYN_H
 #define JIASYN_H
 
-static char rcsid_syn_h[] = "$Id: syn.h,v 1.0 1998/02/19 06:35:20 rasit Exp $";
-
 #define Maxwtnts     511
 #define Maxstacksize 5
 #define hidelock     (Maxlocks + Maxcondvs)

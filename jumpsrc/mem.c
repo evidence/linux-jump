@@ -56,8 +56,6 @@
  *
  **********************************************************************/
 
-static char rcsid_mem_c[] = "$Id: mem.c,v 1.2 1998/03/06 05:07:16 dsm Exp $";
-
 #ifndef NULL_LIB
 #include "global.h"
 #include "mem.h"
@@ -78,6 +76,8 @@ extern address_t newtwin();
 extern void freetwin(address_t twin);
 extern void enable_sigio();
 extern void disable_sigio();
+extern void appendmsg(jia_msg_t *msg, unsigned char *str, int len);
+extern void assert0(int cond, char *amsg);
 
 void initmem();
 void getpage(address_t addr, int writeflag);
@@ -87,7 +87,7 @@ int replacei(int cachei);
 int findposition(address_t addr);
 
 #ifdef SOLARIS
-void sigsegv_handler(int signo, siginfo_t *sip, ucontext_t *uap);
+void sigsegv_handler(siginfo_t *sip, ucontext_t *uap);
 #endif /* SOLARIS */
 
 #if defined AIX41 || defined IRIX62
@@ -95,7 +95,7 @@ void sigsegv_handler();
 #endif /* AIX41 || IRIX62 */
 
 #ifdef LINUX 
-void sigsegv_handler(int, struct sigcontext_struct);
+void sigsegv_handler(struct sigcontext_struct);
 #endif
 
 void getpserver(jia_msg_t *req);
@@ -396,7 +396,7 @@ unsigned long jia_alloc3(int size, int block, int starthost)
   int mapsize;
   int allocsize;
   int originaddr;
-  int homei, pagei, i, j;
+  int pagei, i, j;
  
   if (!((globaladdr + size) <= Maxmemsize)) {
     sprintf(errstr, 
@@ -604,17 +604,17 @@ unsigned char temppage[Pagesize];
 volatile int mapped, tempcopy = 0;
 
 #ifdef SOLARIS 
-void sigsegv_handler(int signo, siginfo_t *sip, ucontext_t *uap)
+void sigsegv_handler(siginfo_t *sip, ucontext_t *uap)
 #endif 
 #if defined AIX41 || defined IRIX62
-void sigsegv_handler(int signo, int code, struct sigcontext *scp, char *addr) 
+void sigsegv_handler(int code, struct sigcontext *scp, char *addr) 
 #endif 
 #ifdef LINUX
-void sigsegv_handler(int signo, struct sigcontext_struct sigctx)
+void sigsegv_handler (struct sigcontext_struct sigctx)
 #endif
 {
   address_t faultaddr;
-  int writefault, cachei, i, j, writeflag, temp, flaggy;
+  int writefault, cachei, temp, flaggy;
   unsigned int faultpage;
   sigset_t set, oldset;
 
@@ -674,13 +674,11 @@ void sigsegv_handler(int signo, struct sigcontext_struct sigctx)
          ((unsigned long)faultaddr >= Startaddr)), errstr);
 
   if (writefault) {
-    writeflag = 1;
 #ifdef DOSTAT
     wfaultcnt++;
 #endif
   }
   else { 
-    writeflag = 0;
 #ifdef DOSTAT
     rfaultcnt++;
 #endif
@@ -934,8 +932,8 @@ void getpserver(jia_msg_t *req)
 {
   address_t paddr; 
   jia_msg_t *rep;
-  int homei, writeflag, grant, i, from, pagei, index;
-  unsigned short int count, locki;
+  int writeflag, grant, i, from, pagei, index;
+  unsigned short int count;
 
 #ifdef JT
   register unsigned int x1, x2;
@@ -1080,8 +1078,8 @@ void getpserver(jia_msg_t *req)
 void getpgrantserver(jia_msg_t *rep)
 {
   address_t addr;
-  int grant, check, i, j;
-  unsigned int datai, pagei, homei;
+  int grant, i, j;
+  unsigned int datai, pagei;
 
 #ifdef JT
   register unsigned int x1, x2;
@@ -1190,7 +1188,7 @@ unsigned long s2s(unsigned char *str)
 void diffserver(jia_msg_t *req)
 {
   int datai;
-  int pagei, prev, next;
+  int pagei;
   unsigned short int i, j, k[3];
   unsigned long paddr;
   unsigned long pstop;
@@ -1309,7 +1307,7 @@ void diffserver(jia_msg_t *req)
       /* decode diff and apply to master copy of page */
       pstop = s2l(req->data + datai) + datai - Intbytes;
       datai += Intbytes;
-      while(datai < pstop) {
+      while(datai < (int) pstop) {
         dsize = s2l(req->data + datai) & 0xffff;
         doffset = (s2l(req->data + datai) >> 16) & 0xffff;
         datai += Intbytes;

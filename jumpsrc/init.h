@@ -54,8 +54,6 @@
 #ifndef JIACREAT_H
 #define JIACREAT_H
 
-static char rcsid_init_h[] = "$Id: init.h,v 1.1 1998/03/06 05:14:42 dsm Exp $";
-
 #define   Wordsize    80
 #define   Linesize    400
 #define   Wordnum     3

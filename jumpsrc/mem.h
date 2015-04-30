@@ -51,8 +51,6 @@
 #ifndef JIAMEM_H
 #define JIAMEM_H
 
-static char rcsid_mem_h[] = "$Id: mem.h,v 1.1 1998/03/06 05:18:11 dsm Exp $";
-
 #define   RESERVE_TWIN_SPACE
 #define   REPSCHEME   0
 #define   Maxdiffs    64

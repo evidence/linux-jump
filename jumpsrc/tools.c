@@ -55,8 +55,6 @@
  *
  **********************************************************************/
 
-static char rcsid_tools_c[] = "$Id: tools.c,v 1.1 1998/03/06 05:20:14 dsm Exp $";
-
 #ifndef NULL_LIB
 #include "global.h"
 #include "init.h"
@@ -73,7 +71,7 @@ void assert(int, char *);
 void jiaexitserver(jia_msg_t *req);
 jia_msg_t *newmsg();
 void freemsg(jia_msg_t *msg);
-void appendmsg(jia_msg_t *msg, unsigned char *str, int len);
+void appendmsg(jia_msg_t *msg, const void *str, int len);
 void printmsg(jia_msg_t *msg,int right);
 void printstack(int ptr);
 unsigned long jia_current_time();
@@ -169,7 +167,7 @@ void freetwin(address_t twin)
 /*-----------------------------------------------------------*/
 jia_msg_t *newmsg()
 {
-  int i,j;
+  int i;
 
   msgcnt++;
   for (i = 0; (i < Maxmsgs) && (msgbusy[i] != 0); i++);
@@ -177,6 +175,7 @@ jia_msg_t *newmsg()
   msgbusy[i] = 1;
 
 #ifdef JIA_DEBUG
+  int j;
   for (j = 0; j < Maxmsgs; j++) printf("%d ", msgbusy[j]);
   printf("  msgcnt = %d\n", msgcnt);
 #endif
@@ -188,13 +187,12 @@ jia_msg_t *newmsg()
 /*-----------------------------------------------------------*/
 void freemsg(jia_msg_t *msg)
 {
-  int i;
   msgbusy[msg->index] = 0;
   msgcnt--;
 }
 
 /*-----------------------------------------------------------*/
-void appendmsg(jia_msg_t *msg, unsigned char *str, int len)
+void appendmsg(jia_msg_t *msg, const void* str, int len)
 {
   assert(((msg->size + len) <= Maxmsgsize), "Message too large");
   memcpy(msg->data + msg->size, str, len);

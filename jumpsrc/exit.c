@@ -51,8 +51,6 @@
  *
  **********************************************************************/
 
-static char rcsid_exit_c[] = "$Id: exit.c,v 1.1 1998/03/06 05:13:02 dsm Exp $";
-
 #ifndef NULL_LIB
 #include "global.h"
 #include "init.h"
@@ -212,7 +210,7 @@ void statgrantserver(jia_msg_t *req)
 
 void jia_exit()
 {
-  int i, j;
+  int i;
 
 #ifdef DOSTAT
   jia_msg_t *reply;

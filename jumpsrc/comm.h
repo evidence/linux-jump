@@ -54,8 +54,6 @@
 #ifndef	JIACOMM_H
 #define	JIACOMM_H
 
-static char rcsid_comm_h[] = "$Id: comm.h,v 1.1 1998/03/06 05:21:04 dsm Exp $";
-
 #include "global.h"
 #include "init.h"
 

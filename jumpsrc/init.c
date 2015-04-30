@@ -55,12 +55,11 @@
  *
  **********************************************************************/
 
-static char rcsid_init_c[] = "$Id: init.c,v 1.2 1998/03/06 05:14:02 dsm Exp $";
-
 #ifndef NULL_LIB
 #include "global.h"
 #include "init.h"
 #include "mem.h"
+
 
 extern void initmem();
 extern void initsyn();
@@ -68,15 +67,17 @@ extern void initcomm();
 extern void disable_sigio();         
 extern void enable_sigio();       
 extern unsigned long jia_current_time();
+extern void assert0(int, char *);
+extern unsigned int get_usecs();
 
 int jump_getline(int *wordc, char wordv[Maxwords][Wordsize]);
 void gethosts();
 int  mypid();
-void copyfiles(int argc, char **argv);
-int startprocs(int argc, char **argv);
+void copyfiles(char *argv);
+void startprocs(int argc, char **argv);
 void jiacreat(int argc, char **argv);
 void barrier0();
-void redirstdio(int argc, char **argv);
+void redirstdio();
 void jia_init(int argc, char **argv);
 void clearstat();
 
@@ -192,7 +193,7 @@ void gethosts()
 }
 
 
-void copyfiles(int argc, char **argv)
+void copyfiles(char *argv)
 {
   int hosti, rcpyes;
   char cmd[Linesize];
@@ -214,22 +215,21 @@ void copyfiles(int argc, char **argv)
 
     cmd[0] = '\0';
     strcat(cmd, "rcp ");
-    strcat(cmd, argv[0]);
+    strcat(cmd, argv);
     strcat(cmd, " ");
     strcat(cmd, hosts[hosti].user);
     strcat(cmd, "@");
     strcat(cmd, hosts[hosti].name);
     strcat(cmd, ":");
     rcpyes = system(cmd);
-    sprintf(errstr, "Cannot rcp %s to %s!\n", argv[0], hosts[hosti].name);
+    sprintf(errstr, "Cannot rcp %s to %s!\n", argv, hosts[hosti].name);
     assert0((rcpyes == 0),errstr);
   } 
   printf("Remote copy succeed!\n\n");
 }
 
-int startprocs(int argc, char **argv)
+void startprocs(int argc, char **argv)
 {
-  struct servent *sp;
   
 #ifdef NFS
   char *pwd;
@@ -357,7 +357,7 @@ void jiacreat(int argc, char **argv)
 /*
     printf("*********Total of %d hosts found!**********\n\n", hostc);
 #ifndef NFS
-    copyfiles(argc, argv); 
+    copyfiles(argv[0]); 
 #endif
 */
     sleep(1);
@@ -403,10 +403,9 @@ void barrier0()
   }
 }
 
-void redirstdio(int argc, char **argv)
+void redirstdio()
 {
   char outfile[Wordsize];
-  int outfd;
 
   if (jia_pid != 0) {
 #ifdef NFS
@@ -428,7 +427,6 @@ void redirstdio(int argc, char **argv)
 
 void jia_init(int argc, char **argv)
 {
-  unsigned long timel, time1;
   struct rlimit rl;
 
   strcpy(argv0, argv[0]);
@@ -457,11 +455,11 @@ void jia_init(int argc, char **argv)
 #else
   sleep(2);
 #endif
-  redirstdio(argc,argv);
+  redirstdio();
   enable_sigio();
 
-  timel = jia_current_time();
-  time1 = jia_clock();
+  jia_current_time();
+  jia_clock();
   if (jia_pid != 0) sleep(1);
 }
 
