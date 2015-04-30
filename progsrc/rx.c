@@ -11,11 +11,12 @@
 
 unsigned int *a;
 
-main(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
    int count[MAGIC];
    unsigned int *local;
-   int i, j, k, element, stage, value, index, error, start, end;
+   unsigned int value;
+   int i, j, k, element, stage, error;
    int remainder, temp1, temp2, temp3, temp;
    double time1, time2, time3, time4, time5;
 
@@ -76,14 +77,12 @@ main(int argc, char ** argv)
       temp2 = rand() % 2048;
       temp3 = rand() % 2048;
       local[i] = (temp1 << 22) + (temp2 << 11) + temp3;
-      if(local[i] == 0) local[i] == 1;
+      if(local[i] == 0) 
+	local[i] = 1;
    }
 
    element = KEY / jiahosts;
    stage = sizeof(unsigned int) * 8 / BIT;
-
-   start = MAGIC / jiahosts * jiapid;
-   end = (MAGIC / jiahosts) * (jiapid + 1);
 
    jia_barrier();
    time3 = jia_clock();
@@ -165,7 +164,7 @@ main(int argc, char ** argv)
          printf("Radix sort: Sorting error!\n");
       if (element != KEY)
       {
-         printf("Radix sort: Error number of keys %d!\n", count);
+         printf("Radix sort: Error number of keys!\n");
          error = 1;
       }
       if (error == 0)

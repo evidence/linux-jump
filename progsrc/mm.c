@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "../jumpsrc/jia.h"
 
+extern unsigned int jia_startstat();
+
 #define N 512
 int (*a)[N], (*b)[N], (*c)[N];
 
@@ -21,12 +23,12 @@ void seqinit()
    }
 }
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
    int x, y, z, p, magic;
    float t0, t1, t2, t3, t4, t5;
    int error;
-   int local[N][N] = { 0 };
+   int local[N][N] = { {0} };
 
    jia_init(argc, argv);
  
@@ -132,5 +134,6 @@ main(int argc, char **argv)
           t5-t4, t5-t0);
 
    jia_exit();
+   return 0;
 } 
 

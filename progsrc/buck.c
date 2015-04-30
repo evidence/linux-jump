@@ -7,19 +7,19 @@
 
 unsigned int *a, *b, *flag;
 
-unsigned int pow(int x)
+unsigned int do_pow(int x)
 {
-   unsigned int i, j;
-   i = 0; j = 1;
+   int i = 0;
+   unsigned int j = 1;
    for (i = 0; i < x; i++)
       j *= 2;
    return j;
 }
 
-unsigned int log2(int x)
+unsigned int do_log2(int x)
 {
-   unsigned int i, j;
-   i = 0; j = 1;
+   unsigned int i = 0;
+   int j = 1;
    while (x >= j * 2)
    {
       i++;
@@ -28,13 +28,14 @@ unsigned int log2(int x)
    return i;
 }
 
-main(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
    unsigned int count[BUCKETS*16];
-   int i, j, k, x, y, counter, z;
-   int remainder, temp1, temp2, temp3, temp, start, locked;
+   int j, k, x, y, counter, z;
+   unsigned int i;
+   int temp1, temp2, temp3, temp, start, locked;
    double time1, time2, time3, time4, time5, time6;
-   unsigned int KEY, MAX, RANGE, MAGIC, BSIZE, PAGES;
+   unsigned int KEY, RANGE, MAGIC, BSIZE, PAGES;
 
    if (argc >= 2)
    {
@@ -92,7 +93,7 @@ main(int argc, char ** argv)
    for (i = 0; i < BUCKETS * 16; i++)
       count[i] = 0;
 
-   RANGE = pow(32 - log2(BUCKETS));
+   RANGE = do_pow(32 - do_log2(BUCKETS));
    printf("range = %d, jiahosts = %d\n", RANGE, jiahosts);
 
    for (i = 0; i < KEY / jiahosts; i++)
@@ -110,14 +111,14 @@ main(int argc, char ** argv)
 
    jia_barrier();
    time4 = jia_clock();
-   printf("Stage 3: Distribution done!\n", KEY);
+   printf("Stage 3: Distribution done! (%u)\n", KEY);
 
    RANGE = RANGE / jiahosts;
 
    for (i = 0; i < BUCKETS * 16; i++)
       count[i] = 0;
 
-   for (i = 0; i < BUCKETS / jiahosts; i++)
+   for (i = 0; i < ((unsigned int) (BUCKETS/jiahosts)); i++)
    {
       counter = KEY / jiahosts * jiapid;
       for (j = 0; j < jiahosts; j++)
@@ -180,16 +181,16 @@ main(int argc, char ** argv)
 
    jia_barrier();
    time5 = jia_clock();
-   printf("Stage 4: Local Sorting done!\n", KEY);
+   printf("Stage 4: Local Sorting done! (%u)\n", KEY);
 
    counter = 0;
    for (i = 0; i < BUCKETS*16; i++)
       counter += count[i];
 
    jia_lock(0);
-   while (flag[0] != jiapid)
+   while (((signed) flag[0]) != jiapid)
    {  jia_unlock(0);
-      for (i = 0; i < rand() * 100; i++);
+      for (i = 0; ((signed) i) < rand() * 100; i++);
       jia_lock(0);
    }
 
@@ -208,19 +209,17 @@ main(int argc, char ** argv)
    else
       locked = 0; 
 
-   for (i = BUCKETS * jiapid; 
-        i < BUCKETS * (jiapid + 1); i++)
+   for (i = BUCKETS * jiapid; ((signed) i) < BUCKETS * (jiapid + 1); i++)
    {
       y = i * BSIZE;
-      for (j = 0; j < count[i]; j++)
+      for (j = 0; j < ((signed) (count[i])); j++)
       {
          if (locked == 1 && x % BSIZE == 0)
 	 {
             jia_unlock(jiapid);
 	    locked = 0;
 	 }
-	 else if (locked == 0 && start + counter - x < BSIZE
-			      && x % BSIZE == 0)
+	 else if ((locked == 0) && (start + counter - x < ((signed) BSIZE)) && (x%BSIZE == 0))
 	      {
 		 jia_lock(jiapid+1);
 		 locked = 1;

@@ -141,11 +141,11 @@ void checka()
  }
 }
 
-main(int argc, char **argv)
-{int i,j,k;
+int main(int argc, char **argv)
+{
  float tt1, tt2, tt3, tt4, tt5;
 
-  printf("Seed is %d\n", flag);
+  printf("Seed is %lu\n", flag);
 
   jia_init(argc,argv);
 
@@ -172,4 +172,6 @@ main(int argc, char **argv)
           tt2-tt1, tt3-tt2, tt4-tt3, tt5-tt4, tt5-tt5, tt5-tt1);
 
   jia_exit();
+  
+  return 0;
 }

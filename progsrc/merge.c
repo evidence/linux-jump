@@ -7,12 +7,13 @@
 
 unsigned int *a;
 
-main(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
    unsigned int *local;
    unsigned int i, count1, count2, count3, temp;
    double time1, time2, time3, time4, time5, t1, t2, x1, x2, x3;   
-   unsigned int magic, allocate, start, stage;
+   unsigned int magic, allocate, start;
+   int stage;
 
    jia_init(argc, argv);
    jia_barrier();
@@ -26,7 +27,7 @@ main(int argc, char ** argv)
    allocate = 1;
    t2 = -1.000;
 
-   for (i = 2; i <= jiahosts; i *= 2)
+   for (i = 2; ((signed) i) <= jiahosts; i *= 2)
       if (jiapid % i == 0)
          allocate = i;
 
