@@ -117,7 +117,7 @@ typedef void (* void_func_handler)();
 
 
 #define SPACE(right) { if ((right) == 1) 	\
-                        printf("\t\t\t"); 	\
-                     }
+	printf("\t\t\t"); 	\
+}
 
 #endif /* JIAGLOBAL_H */

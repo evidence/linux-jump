@@ -61,22 +61,22 @@
 
 
 typedef struct wtnttype {
-        int	        wtnts[Maxwtnts];
-        int             from[Maxwtnts];
-        int             wtntc;
-        struct wtnttype *more;
-               } wtnt_t;
+	int	        wtnts[Maxwtnts];
+	int             from[Maxwtnts];
+	int             wtntc;
+	struct wtnttype *more;
+} wtnt_t;
 
 typedef struct locktype {
-        int         acqs[Maxhosts];
-        int         acqc;
-        int         condv;
-        wtnt_t      *wtntp;
-               } jialock_t;
+	int         acqs[Maxhosts];
+	int         acqc;
+	int         condv;
+	wtnt_t      *wtntp;
+} jialock_t;
 
 typedef struct stacktype {
-        int         lockid;
-        wtnt_t      *wtntp;
-               } jiastack_t;
+	int         lockid;
+	wtnt_t      *wtntp;
+} jiastack_t;
 
 #endif /* JIASYN_H */

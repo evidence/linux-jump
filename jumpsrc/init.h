@@ -64,54 +64,54 @@
 #define   SIGIOoverhead  200
 
 typedef struct host_t {
-  char name[Wordsize];
-  char user[Wordsize];
-  char dir[Wordsize];
-  char passwd[Wordsize];
-  char addr[Wordsize];             /* IP address */
-  int  addrlen;
-  int  homesize;
-  int  homestart;
-  int  riofd;
-  int  rerrfd;
+	char name[Wordsize];
+	char user[Wordsize];
+	char dir[Wordsize];
+	char passwd[Wordsize];
+	char addr[Wordsize];             /* IP address */
+	int  addrlen;
+	int  homesize;
+	int  homestart;
+	int  riofd;
+	int  rerrfd;
 } host_t;
 
 #ifdef DOSTAT
 typedef struct Stats {
-        unsigned int kernelflag;
+	unsigned int kernelflag;
 
-        unsigned int msgsndbytes;
-        unsigned int msgrcvbytes;
-        unsigned int msgrcvcnt;
-        unsigned int msgsndcnt;
-        unsigned int segvLcnt;
-        unsigned int segvRcnt;
-        unsigned int usersigiocnt;
-        unsigned int synsigiocnt;
-        unsigned int segvsigiocnt;
-        unsigned int barrcnt;
-        unsigned int lockcnt;
-        unsigned int getpcnt;
-        unsigned int diffcnt;
-        unsigned int invcnt;
-        unsigned int mwdiffcnt;
-        unsigned int swdiffcnt;
+	unsigned int msgsndbytes;
+	unsigned int msgrcvbytes;
+	unsigned int msgrcvcnt;
+	unsigned int msgsndcnt;
+	unsigned int segvLcnt;
+	unsigned int segvRcnt;
+	unsigned int usersigiocnt;
+	unsigned int synsigiocnt;
+	unsigned int segvsigiocnt;
+	unsigned int barrcnt;
+	unsigned int lockcnt;
+	unsigned int getpcnt;
+	unsigned int diffcnt;
+	unsigned int invcnt;
+	unsigned int mwdiffcnt;
+	unsigned int swdiffcnt;
 
-        unsigned int segvLtime;
-        unsigned int segvRtime;
-        unsigned int barrtime;
-        unsigned int locktime;
-        unsigned int unlocktime;
-        unsigned int usersigiotime;
-        unsigned int synsigiotime;
-        unsigned int segvsigiotime;
-        
-        unsigned int asendtime;
-        unsigned int endifftime;
-        unsigned int dedifftime;
+	unsigned int segvLtime;
+	unsigned int segvRtime;
+	unsigned int barrtime;
+	unsigned int locktime;
+	unsigned int unlocktime;
+	unsigned int usersigiotime;
+	unsigned int synsigiotime;
+	unsigned int segvsigiotime;
 
-        /*Follow used by Shi*/
-        unsigned int difftime;
+	unsigned int asendtime;
+	unsigned int endifftime;
+	unsigned int dedifftime;
+
+	/*Follow used by Shi*/
+	unsigned int difftime;
 	unsigned int busytime;
 	unsigned int datatime;
 	unsigned int syntime;

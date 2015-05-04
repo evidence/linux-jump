@@ -88,15 +88,15 @@
 #define  inqt    inqueue[intail]
 #define  outqh   outqueue[outhead]
 #define  outqt   outqueue[outtail]
- 
+
 typedef struct Jia_Msg {
 	int op;
 	int frompid;
 	int topid;
 	int syn;
 	int seqno;
-        int index;  
-        int binterval;
+	int index;  
+	int binterval;
 	int size;
 	unsigned char data[Maxmsgsize];
 } jia_msg_t;
@@ -104,15 +104,15 @@ typedef struct Jia_Msg {
 typedef  jia_msg_t* msgp_t;
 
 typedef struct CommManager {
-    	int                 snd_fds[Maxhosts];
-   	fd_set              snd_set;
-    	int                 snd_maxfd;
-    	unsigned            snd_seq[Maxhosts];
+	int                 snd_fds[Maxhosts];
+	fd_set              snd_set;
+	int                 snd_maxfd;
+	unsigned            snd_seq[Maxhosts];
 
-    	int                 rcv_fds[Maxhosts];
-    	fd_set              rcv_set;
-    	int                 rcv_maxfd;
-    	unsigned            rcv_seq[Maxhosts];
+	int                 rcv_fds[Maxhosts];
+	fd_set              rcv_set;
+	int                 rcv_maxfd;
+	unsigned            rcv_seq[Maxhosts];
 } CommManager;
 
 #endif	/* JIACOMM_H */

@@ -94,11 +94,11 @@ extern int      jia_lock_index;
 
 #define	ALOCKDEC(x,y)	int x[y];
 #define	ALOCKINIT(x,y)	{						\
-			int i;		 				\
-			for (i = 0; i < (y); i++) {			\
-				(x)[i] = (jia_lock_index++) % Maxlocks;	\
-			}						\
-			}
+	int i;		 				\
+	for (i = 0; i < (y); i++) {			\
+		(x)[i] = (jia_lock_index++) % Maxlocks;	\
+	}						\
+}
 #define	ALOCK(x,y)	jia_lock((x)[y]);
 #define	AULOCK(x,y)	jia_unlock((x)[y]);
 

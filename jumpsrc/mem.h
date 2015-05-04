@@ -69,50 +69,50 @@
 #define   LOCKLEN     ((Maxlocks + CHARBITS - 1) / CHARBITS)
 
 #define   DIFFNULL  ((jia_msg_t*) NULL)
-  
+
 #define   homehost(addr) page[((unsigned long)(addr)-Startaddr)/Pagesize].homepid
 #define   homepage(addr) ((unsigned long)(addr)-Startaddr)/Pagesize
 
 #define   memprotect(argx, argy, argz)                               	\
-          { int protyes;                                            	\
-            unsigned long ad;                                       	\
-            protyes=mprotect((caddr_t)(argx),(size_t)(argy),argz);  	\
-            if (protyes != 0) {                                        	\
-              ad=(unsigned long)argx;                               	\
-              sprintf(errstr,"mprotect failed! addr=0x%lx,errno=%d",ad,errno); \
-              assert((protyes==0),errstr);                          	\
-           }                                                       	\
-          }
+{ int protyes;                                            	\
+	unsigned long ad;                                       	\
+	protyes=mprotect((caddr_t)(argx),(size_t)(argy),argz);  	\
+	if (protyes != 0) {                                        	\
+		ad=(unsigned long)argx;                               	\
+		sprintf(errstr,"mprotect failed! addr=0x%lx,errno=%d",ad,errno); \
+		assert((protyes==0),errstr);                          	\
+	}                                                       	\
+}
 
 #define   memmap(arg1,arg2,arg3,arg4,arg5,arg6)                        	\
-          { caddr_t mapad;						\
-            mapad=mmap((caddr_t)(arg1),(size_t)(arg2),(arg3),(arg4),(arg5),(arg6)); \
-            if (mapad != (caddr_t)(arg1)) {				\
-              sprintf(errstr,"mmap failed! addr=0x%lx, errno=%d",(unsigned long)(arg1),errno);\
-              assert(0,errstr);						\
-            }                                                           \
-          }
+{ caddr_t mapad;						\
+	mapad=mmap((caddr_t)(arg1),(size_t)(arg2),(arg3),(arg4),(arg5),(arg6)); \
+	if (mapad != (caddr_t)(arg1)) {				\
+		sprintf(errstr,"mmap failed! addr=0x%lx, errno=%d",(unsigned long)(arg1),errno);\
+		assert(0,errstr);						\
+	}                                                           \
+}
 
 typedef unsigned char* address_t; 
 
 typedef enum { UNMAP, INV, RO, RW, R1, MAP } pagestate_t;
 
 typedef struct {
-           address_t          addr;
-           unsigned short int cachei;
-           unsigned short int state;
-           char               wtnt;  
-           char               rdnt;
-           char               homepid;
-           char               oldhome;
-           char               pend[Maxhosts];
-           } jiapage_t;
+	address_t          addr;
+	unsigned short int cachei;
+	unsigned short int state;
+	char               wtnt;  
+	char               rdnt;
+	char               homepid;
+	char               oldhome;
+	char               pend[Maxhosts];
+} jiapage_t;
 
 typedef struct {
-           pagestate_t        state;
-           address_t          addr;
-           address_t          twin;
-           char               wtnt;   
-           } jiacache_t;
+	pagestate_t        state;
+	address_t          addr;
+	address_t          twin;
+	char               wtnt;   
+} jiacache_t;
 
 #endif /* JIAMEM_H */
