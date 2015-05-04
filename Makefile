@@ -2,8 +2,8 @@
 
 all:
 	$(MAKE) -C jumplib
-	$(MAKE) -C progsrc
+	$(MAKE) -C apps
 
 clean:
 	$(MAKE) -C jumplib clean
-	$(MAKE) -C progsrc clean
+	$(MAKE) -C apps clean
