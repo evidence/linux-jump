@@ -1628,7 +1628,6 @@ void recordwtnts(jia_msg_t *req)
 
 void wtntserver(jia_msg_t *req)
 {
-  int lock;
 
 #ifdef JT
   register unsigned int x1, x2;
@@ -1640,9 +1639,9 @@ void wtntserver(jia_msg_t *req)
 	  "Incorrect WTNT Message!"); 
 #endif
 
-  lock = (int)stol(req->data);
 
 #ifdef MHPDEBUG
+  int lock = (int)stol(req->data);
   assert((lock % hostc == jia_pid), "Incorrect home of lock!");
 #endif
 
