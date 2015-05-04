@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Wextra
-LDFLAGS=-L../jumplib
+LDFLAGS=-L../build
 LDLIBS=-ljia
 
 .PHONY: clean
