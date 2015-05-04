@@ -1,9 +1,9 @@
 .PHONY: all clean
 
 all:
-	$(MAKE) -C jumplib
+	$(MAKE) -C build
 	$(MAKE) -C apps
 
 clean:
-	$(MAKE) -C jumplib clean
+	$(MAKE) -C build clean
 	$(MAKE) -C apps clean
