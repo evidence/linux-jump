@@ -1,2 +1,34 @@
-JUMP-linux is a Software Distributed Shared Memory (SDSM) for Linux.
-It is based on JUMP (http://www.snrg.cs.hku.hk/srg/html/jump.htm) which, in turn, was based on JIAJIA 1.1
+	**************
+        * JUMP-Linux *
+        **************
+
+1. Introduction
+
+   JUMP-linux is a Software Distributed Shared Memory (SDSM) for Linux.
+
+   It is based on JUMP (http://www.snrg.cs.hku.hk/srg/html/jump.htm) which, in
+   turn, is based on JIAJIA 1.1
+
+   This version only supports the Linux OS and the x86 and ARM architectures.
+
+2. Build
+
+   Edit the ARCH_FLAGS variable in the main Makefile and either add -DARCH_X86
+   or -DARCH_ARM based on your specific platform.
+
+   Then, type "make"
+
+3. Configuration
+
+   3.1 Edit ~/.jiahosts and add the list of enabled hosts:
+
+       <hostname> <username> XXX
+
+   3.2 Add the enabled hosts to ~/.rhosts as well:
+
+       <hostname> <username>
+
+4. Run
+
+   The application binary must be put and started from <username>'s home
+   directory.
