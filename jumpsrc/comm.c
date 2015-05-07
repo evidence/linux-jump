@@ -241,7 +241,8 @@ void initcomm()
 	/* set up SIGIO and SIGINT handlers */
 
 #if defined SOLARIS || defined IRIX62
-	{ struct sigaction act;
+	{ 
+		struct sigaction act;
 
 		act.sa_handler = (void_func_handler)sigio_handler;
 		sigemptyset(&act.sa_mask);
@@ -258,7 +259,8 @@ void initcomm()
 	}
 #endif
 #ifdef LINUX
-	{ struct sigaction act;
+	{ 
+		struct sigaction act;
 
 		act.sa_handler = (void_func_handler)sigio_handler;
 		sigemptyset(&act.sa_mask);
@@ -277,7 +279,8 @@ void initcomm()
 	}
 #endif
 #ifdef AIX41
-	{ struct sigvec vec;
+	{ 
+		struct sigvec vec;
 
 		vec.sv_handler = (void_func_handler)sigio_handler;
 		vec.sv_flags = SV_INTERRUPT;
