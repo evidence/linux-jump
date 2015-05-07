@@ -134,15 +134,7 @@ void initcomm();
 int req_fdcreate(int, int);
 int rep_fdcreate(int, int);
 
-#if defined SOLARIS || defined IRIX62
-void sigio_handler(int sig, siginfo_t *sip, ucontext_t *uap);
-#endif /* SOLARIS */
-#ifdef LINUX
 void sigio_handler();
-#endif
-#ifdef AIX41
-void sigio_handler();
-#endif /* AIX41 */
 
 void sigint_handler();
 void asendmsg(jia_msg_t *);
@@ -191,24 +183,10 @@ int req_fdcreate(int i, int flag)
 int rep_fdcreate(int i, int flag)  /* acknowledgement sockets */
 {
 	int fd, res;
-#ifdef SOLARIS
-	int size;
-#endif /* SOLARIS */
 	struct sockaddr_in addr;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	assert0((fd != -1), "rep_fdcreate()-->socket()");
-
-#ifdef SOLARIS
-	/* set the buffer size for send and receive sockets */
-	size = Intbytes;
-	res = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *)&size, sizeof(size));
-	assert0((res == 0), "rep_fdcreate()-->setsockopt(): SO_RCVBUF");
-
-	size = Intbytes;
-	res = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof(size));
-	assert0((res == 0), "rep_fdcreate()-->setsockopt(): SO_SNDBUF");
-#endif /* SOLARIS */
 
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
@@ -240,25 +218,6 @@ void initcomm()
 
 	/* set up SIGIO and SIGINT handlers */
 
-#if defined SOLARIS || defined IRIX62
-	{ 
-		struct sigaction act;
-
-		act.sa_handler = (void_func_handler)sigio_handler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = SA_SIGINFO;
-		if (sigaction(SIGIO, &act, NULL))
-			assert0(0, "initcomm()-->sigaction()");
-
-		act.sa_handler = (void_func_handler)sigint_handler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = SA_SIGINFO;
-		if (sigaction(SIGINT, &act, NULL)) {
-			assert0(0, "segv sigaction problem");  
-		}
-	}
-#endif
-#ifdef LINUX
 	{ 
 		struct sigaction act;
 
@@ -277,20 +236,6 @@ void initcomm()
 			assert0(0, "segv sigaction problem");  
 		}
 	}
-#endif
-#ifdef AIX41
-	{ 
-		struct sigvec vec;
-
-		vec.sv_handler = (void_func_handler)sigio_handler;
-		vec.sv_flags = SV_INTERRUPT;
-		sigvec(SIGIO, &vec, NULL);
-
-		vec.sv_handler = (void_func_handler)sigint_handler;
-		vec.sv_flags = 0;
-		sigvec(SIGINT, &vec, NULL);
-	}
-#endif 
 
 	/***********Initialize comm ports********************/
 
@@ -388,15 +333,7 @@ void sigint_handler()    /* Invoked by user pressing Ctrl-C */
 }
 
 /*----------------------------------------------------------*/
-#if defined SOLARIS || defined IRIX62
-void  sigio_handler(int sig, siginfo_t *sip, ucontext_t *uap)
-#endif
-#ifdef LINUX
 void sigio_handler()
-#endif
-#ifdef AIX41 
-void sigio_handler()
-#endif
 {
 	int res;
 	int i;

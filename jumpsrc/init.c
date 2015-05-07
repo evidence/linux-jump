@@ -250,7 +250,6 @@ void startprocs(int argc, char **argv)
 	assert0( (Startport != -1), "getpid() error");
 	Startport = 10000 + (Startport * Maxhosts * Maxhosts * 4) % 10000;
 
-#ifdef LINUX 
 	for (hosti = 1; hosti < hostc; hosti++) {
 #ifdef NFS
 		sprintf(cmd, "cd %s; %s", pwd, pwd);
@@ -280,40 +279,6 @@ void startprocs(int argc, char **argv)
 		sprintf(errstr, "Fail to start process on %s!", hosts[hosti].name);
 		assert0((hosts[hosti].riofd != -1), errstr);
 	}
-#else /* LINUX */
-	for (hosti = 1; hosti < hostc; hosti++) {
-#ifdef NFS
-		sprintf(cmd, "cd %s; %s", pwd, pwd);
-#else  /* NFS */
-		cmd[0] = '\0';
-		strcat(cmd, "~");
-		strcat(cmd, hosts[hosti].user);
-#endif /* NFS */
-		strcat(cmd, "/");
-		for (i = 0; i < argc; i++){
-			strcat(cmd, argv[i]);
-			strcat(cmd, " ");
-		}
-		strcat(cmd, "-P");
-		sprintf(cmd,"%s%d ", cmd, Startport);
-
-		printf("Starting CMD %s on host %s\n", cmd, hosts[hosti].name);
-		sp = getservbyname("exec", "tcp");
-		assert0((sp != NULL), "exec/tcp: unknown service!");
-		hostname = hosts[hosti].name;
-
-#ifdef NFS
-		hosts[hosti].riofd = rexec(&hostname, sp->s_port, NULL, NULL,
-				cmd, &(hosts[hosti].rerrfd));
-#else  /* NFS */
-		hosts[hosti].riofd = rexec(&hostname, sp->s_port, hosts[hosti].user,
-				hosts[hosti].passwd, cmd,
-				&(hosts[hosti].rerrfd));
-#endif /* NFS */
-		sprintf(errstr, "Fail to start process on %s!", hosts[hosti].name);
-		assert0((hosts[hosti].riofd != -1), errstr);
-	}
-#endif /* LINUX */
 }
 
 int mypid()
@@ -438,12 +403,10 @@ void jia_init(int argc, char **argv)
 	disable_sigio();
 	jia_lock_index = 0;  
 	jiacreat(argc, argv);
-#if defined SOLARIS || defined LINUX
 	sleep(2);
 	rl.rlim_cur = Maxfileno;
 	rl.rlim_max = Maxfileno;
 	setrlimit(RLIMIT_NOFILE, &rl);
-#endif /* SOLARIS */
 
 	rl.rlim_cur = Maxmemsize;
 	rl.rlim_max = Maxmemsize;
@@ -455,11 +418,7 @@ void jia_init(int argc, char **argv)
 #ifdef DOSTAT
 	clearstat();
 #endif
-#ifndef LINUX
-	barrier0();
-#else
 	sleep(2);
-#endif
 	redirstdio();
 	enable_sigio();
 
@@ -501,8 +460,6 @@ unsigned int jia_startstat()
 
 unsigned int jia_stopstat()
 {
-#ifdef DOSTAT
-#endif
 	t_stop = get_usecs();
 	return t_stop;
 }

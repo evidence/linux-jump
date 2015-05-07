@@ -62,14 +62,7 @@
 #include "init.h"
 #include "comm.h"
 #include "syn.h"
-
-#ifdef IRIX62
-#include <sys/sbd.h>
-#endif /* IRIX62 */
-
-#ifdef LINUX
 #include <ucontext.h>
-#endif
 
 extern void assert(int cond, char *errstr);
 extern jia_msg_t *newmsg();
@@ -90,17 +83,7 @@ void flushpage(int cachei);
 int replacei(int cachei);
 int findposition(address_t addr);
 
-#ifdef SOLARIS
-void sigsegv_handler(siginfo_t *sip, ucontext_t *uap);
-#endif /* SOLARIS */
-
-#if defined AIX41 || defined IRIX62
-void sigsegv_handler();
-#endif /* AIX41 || IRIX62 */
-
-#ifdef LINUX 
 void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *context);
-#endif
 
 void getpserver(jia_msg_t *req);
 void getpgrantserver(jia_msg_t *req);
@@ -162,9 +145,7 @@ int numberofpages;
 int value;
 unsigned long totalhome;
 
-#if defined SOLARIS || defined IRIX62 || defined LINUX
 long jiamapfd;
-#endif /* SOLARIS || IRIX62 || LINUX */
 
 volatile int getpwait;
 volatile int diffwait;
@@ -344,19 +325,6 @@ void initmem()
 
 	globaladdr = 0;
 
-#if defined SOLARIS || defined IRIX62
-	jiamapfd = open("/dev/zero", O_RDWR,0);
-	{ 
-		struct sigaction act;
-		act.sa_handler = (void_func_handler)sigsegv_handler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = SA_SIGINFO;
-		if (sigaction(SIGSEGV, &act, NULL))
-			assert0(0,"segv sigaction problem");
-	}
-#endif 
-
-#ifdef LINUX
 	jiamapfd = open("/dev/zero", O_RDWR,0);
 	{
 		struct sigaction act;
@@ -366,16 +334,6 @@ void initmem()
 		if (sigaction(SIGSEGV, &act, NULL))
 			assert0(0,"segv sigaction problem");
 	}
-#endif 
-
-#ifdef AIX41
-	{ 
-		struct sigvec vec;
-		vec.sv_handler = (void_func_handler)sigsegv_handler;
-		vec.sv_flags = SV_INTERRUPT;
-		sigvec(SIGSEGV, &vec, NULL);
-	}
-#endif /* SOLARIS */
 
 	for (i = 0; i < Setnum; i++) repcnt[i] = 0;
 	srand(1);
@@ -421,24 +379,12 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 			assert((hosts[homepid].homesize + mapsize)
 					< (Maxmempages * Pagesize), "Too many home pages");
 			if (hostc > 1) {
-#if defined SOLARIS || defined IRIX62 || defined LINUX
 				memmap(Startaddr + globaladdr, mapsize, PROT_READ,
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
-#endif 
-#ifdef AIX41
-				memmap(Startaddr + globaladdr , mapsize , PROT_READ,
-						MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
-#endif
 			}
 			else {
-#if defined SOLARIS || defined IRIX62 || defined LINUX
 				memmap(Startaddr + globaladdr, mapsize, PROT_READ | PROT_WRITE,
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
-#endif 
-#ifdef AIX41
-				memmap(Startaddr + globaladdr , mapsize , PROT_READ | PROT_WRITE,
-						MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
-#endif 
 			}
 
 			for (i = 0; i < mapsize; i += Pagesize) {
@@ -607,15 +553,7 @@ int findposition(address_t addr)
 unsigned char temppage[Pagesize];
 volatile int mapped, tempcopy = 0;
 
-#ifdef SOLARIS 
-void sigsegv_handler(siginfo_t *sip, ucontext_t *uap)
-#endif 
-#if defined AIX41 || defined IRIX62
-void sigsegv_handler(int code, struct sigcontext *scp, char *addr) 
-#endif 
-#ifdef LINUX
 void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *context)
-#endif
 {
 	address_t faultaddr;
 	int writefault, cachei, temp, flaggy;
@@ -649,23 +587,6 @@ void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *con
 	sigaddset(&set, SIGIO);
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
 
-#ifdef SOLARIS
-	faultaddr = (address_t)sip->si_addr;
-	faultaddr = (address_t)((unsigned long)faultaddr / Pagesize * Pagesize);
-	writefault = (int)(*(unsigned *)uap->uc_mcontext.gregs[REG_PC] &
-			(1 << 21));
-#endif
-#ifdef AIX41 
-	faultaddr = (char *)scp->sc_jmpbuf.jmp_context.o_vaddr;
-	faultaddr = (address_t)((unsigned long)faultaddr / Pagesize * Pagesize);
-	writefault = (scp->sc_jmpbuf.jmp_context.except[1] & DSISR_ST) >> 25;
-#endif
-#ifdef IRIX62
-	faultaddr = (address_t)scp->sc_badvaddr;
-	faultaddr = (address_t)((unsigned long)faultaddr / Pagesize * Pagesize);
-	writefault = (int)(scp->sc_cause & EXC_CODE(1));
-#endif
-#ifdef LINUX 
 	faultaddr = (address_t) sip->si_addr;
 	ucontext_t *uctx = (ucontext_t *) context;
 	// We check the error register in mcontext_t.
@@ -676,7 +597,6 @@ void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *con
 	int writefault = (((unsigned int)u->uc_mcontext.error_code & (1<<11)) >> 11);
 #else
 	#error "No architecture specified!
-#endif
 #endif
 
 	faultpage = (unsigned int) homepage(faultaddr);
@@ -787,14 +707,8 @@ void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *con
 			}
 			if (mapped == 0) {
 
-#if defined SOLARIS || defined IRIX62 || defined LINUX
 				memmap(faultaddr, Pagesize, PROT_READ | PROT_WRITE,
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
-#endif 
-#ifdef AIX41
-				memmap(faultaddr, Pagesize, PROT_READ | PROT_WRITE,
-						MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
-#endif
 			}
 			else
 				memprotect((caddr_t)faultaddr, (size_t)Pagesize,

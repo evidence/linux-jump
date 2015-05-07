@@ -2,10 +2,8 @@
 #  Platform dependent rules and defines...
 #*********************************************************
 
-ARCH = linux
 ARCH_FLAGS  = -DLINUX -D_GNU_SOURCE -DCachepages=1024 -DX86
 CC  = gcc
-CCC = gcc
 
 SRC	= ../jumpsrc 
 

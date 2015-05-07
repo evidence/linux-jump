@@ -58,10 +58,6 @@
 #include        <stdlib.h>
 #include        <memory.h>
 #include        <stdarg.h>
-#ifndef    LINUX
-#include        <stropts.h>
-#include        <sys/conf.h>
-#endif 
 #include        <sys/socket.h>
 #include        <sys/time.h>
 #include        <sys/types.h>
@@ -74,42 +70,20 @@
 #include        <sys/stat.h>
 #include        <string.h>
 
-#ifdef SOLARIS
-#include        <ucontext.h>
-#include        <siginfo.h>
-#endif /* SOLARIS */
-
 #include        <unistd.h>
 #include        <pwd.h>
 #include 	<signal.h>
 #define sigcontext_struct sigcontext
 
-#ifdef SOLARIS
-#include        <sys/file.h>
-#endif /* SOLARIS */
-
 #include        <string.h>
 #include        <sys/resource.h>
 
-#ifdef AIX41
-#include	<sys/select.h>
-#include 	<sys/signal.h>
-#endif /* AIX41 */
-
-#ifdef LINUX
 #include        <sys/fcntl.h>
-// #include        <asm/sigcontext.h>
 #include        <asm/mman.h> 
-#endif         
 
 #include        "jia.h"
 
 typedef void (* void_func_handler)();
-
-#ifndef	TRUE
-#	define	TRUE		1
-#	define	FALSE		0
-#endif /* TRUE */
 
 #ifndef MAX
 #define MAX(x, y)  (((x) >= (y)) ? (x) : (y)) 

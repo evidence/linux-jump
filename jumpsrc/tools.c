@@ -203,11 +203,7 @@ wtnt_t *newwtnt()
 {
 	wtnt_t *wnptr;
 
-#ifdef SOLARIS
-	wnptr = memalign((size_t)Pagesize, (size_t)sizeof(wtnt_t));
-#else  /* SOLARIS */
 	wnptr = valloc((size_t)sizeof(wtnt_t));
-#endif /* SOLARIS */
 
 	assert((wnptr != WNULL), "Cannot allocate space for write notices!");
 	wnptr->more = WNULL;
@@ -384,27 +380,6 @@ void jia_error(char *errstr)
 /*-----------------------------------------------------------*/
 unsigned int get_usecs()
 {
-#ifdef AIX41
-	register unsigned int seconds asm("5");
-	register unsigned int nanosecs asm("6");
-	register unsigned int seconds2 asm("7");
-
-	/* Need to read the first value twice to make sure it doesn't role
-	 *   over while we are reading it.
-	 */
-retry:
-	asm("mfspr   5,4");     /* read high into register 5 - seconds */
-	asm("mfspr   6,5");     /* read low into register 6 - nanosecs */
-	asm("mfspr   7,4");     /* read high into register 7 - seconds2 */
-
-	if (seconds != seconds2) {
-		goto retry;
-	}
-
-	/* convert to correct form. */
-
-	return seconds * 1000000 + nanosecs / 1000;
-#else  /* AIX41 */
 	static struct timeval base;
 	struct timeval time;
 
@@ -414,5 +389,4 @@ retry:
 	}
 	return ((time.tv_sec - base.tv_sec) * 1000000 +
 			(time.tv_usec - base.tv_usec));
-#endif /* AIX41 */
 }
