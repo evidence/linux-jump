@@ -594,7 +594,7 @@ void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *con
 #ifdef ARCH_X86
 	writefault = (int)(*(unsigned *)uctx->uc_mcontext.gregs[REG_ERR] & 0x2);
 #elif defined ARCH_ARM
-	int writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
+	writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
 #else
 	#error "No architecture specified!"
 #endif
