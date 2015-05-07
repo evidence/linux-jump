@@ -3,31 +3,29 @@
 #*********************************************************
 
 # Set -DARCH_X86 or -DARCH_ARM depending on your specific hardware
+# Add -DNFS to enable NFS
 ARCH_FLAGS  = -D_GNU_SOURCE -DCachepages=1024 -DARCH_X86
-CC  = gcc
 
-SRC	= ../jumpsrc 
+CC  = gcc
+CFLAGS	= -I../include $(ARCH_FLAGS) -Wall -Wextra 
+
+TARGET 	= libjia.a
+SRC	= ../src 
 
 .PHONY: clean
 
-# Add -DNFS to CFLAGS to enable NFS
-CFLAGS	= -I./${SRC} $(ARCH_FLAGS) -Wall -Wextra 
 OBJS 	= comm.o init.o mem.o syn.o tools.o exit.o
-
-VPATH   = ./$(SRC)
-
-TARGET 	= libjia.a
-
-%.d: %.c
-	@echo "Creating $@..."
-	@$(SHELL) -ec "$(CC) -MM $(CPPFLAGS) $< | sed ' s/$*\.o/& $@/g' > $@"
 
 $(TARGET):$(OBJS)
 	ar rv $(TARGET) $?
 
-all:$(TARGET)
+VPATH   = ./$(SRC)
+
+%.d: %.c
+	@echo "Creating $@..."
+	@$(SHELL) -ec "$(CC) -MM $(CPPFLAGS) $< | sed ' s/$*\.o/& $@/g' > $@"
+	include $(OBJS:.o=.d) 
 
 clean:
 	rm -f *.[od] $(TARGET)
 
-include $(OBJS:.o=.d) 

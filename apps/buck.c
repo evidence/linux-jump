@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../jumpsrc/jia.h"
+#include "jia.h"
 
 #define BUCKETS       256         /* number of buckets for each proc */
 #define SEED            1

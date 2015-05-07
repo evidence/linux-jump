@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra
+CFLAGS=-Wall -Wextra -I ../include/
 LDFLAGS=-L../build
 LDLIBS=-ljia
 

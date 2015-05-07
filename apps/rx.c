@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../jumpsrc/jia.h"
+#include "jia.h"
 
 #define MAGIC       16                      /* number of slots */
 #define BIT          4                      /* 2 ^ 4 = 16 */

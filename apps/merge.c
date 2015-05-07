@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../jumpsrc/jia.h"
+#include "jia.h"
 
 #define KEY    2097152                      /* numbers to be sorted */
 #define SEED         1

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../jumpsrc/jia.h"
+#include "jia.h"
 
 extern unsigned int jia_startstat();
 

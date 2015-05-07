@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include "../jumpsrc/jia.h"
+#include "jia.h"
 
 #define N         512
 #define CHECK     1
