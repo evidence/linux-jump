@@ -55,11 +55,12 @@
  *
  **********************************************************************/
 
+#include <stdio.h>
+
 #ifndef NULL_LIB
 #include "global.h"
 #include "init.h"
 #include "mem.h"
-
 
 extern void initmem();
 extern void initsyn();
@@ -94,6 +95,16 @@ int jia_lock_index;
 
 #ifdef DOSTAT
 jiastat_t jiastat;
+
+/**
+ * Reset statistical information.
+ */
+void clearstat()
+{
+	memset((char*)&jiastat, 0, sizeof(jiastat));
+}
+#else
+void clearstat(){}
 #endif
 
 int jump_getline(int *wordc, char wordv[Maxwords][Wordsize])
@@ -324,12 +335,6 @@ void jiacreat(int argc, char **argv)
 	jia_pid = mypid();
 
 	if (jia_pid == 0) { 
-		/*
-		   printf("*********Total of %d hosts found!**********\n\n", hostc);
-#ifndef NFS
-copyfiles(argv[0]); 
-#endif
-*/
 		sleep(1);
 		startprocs(argc, argv);
 	} else {
@@ -378,23 +383,19 @@ void redirstdio()
 	char outfile[Wordsize];
 
 	if (jia_pid != 0) {
-#ifdef NFS
 		sprintf(outfile,"debug-%d.log", jia_pid);
-#else
-		sprintf(outfile,"debug-%d.log", jia_pid);
-#endif
 		freopen(outfile, "w", stdout);
 		setbuf(stdout, NULL);
-#ifdef NFS
 		sprintf(outfile, "debug-%d.err", jia_pid);
-#else
-		sprintf(outfile, "debug-%d.err", jia_pid);
-#endif
 		freopen(outfile, "w", stderr);
 		setbuf(stderr, NULL);
 	}
 }
 
+/**
+ * This is the first function invoked by the application to set-up the DSM.
+ * argc and argv are the same arguments of the application's main().
+ */
 void jia_init(int argc, char **argv)
 {
 	struct rlimit rl;
@@ -415,9 +416,7 @@ void jia_init(int argc, char **argv)
 	initmem();
 	initsyn();
 	initcomm();
-#ifdef DOSTAT
 	clearstat();
-#endif
 	sleep(2);
 	redirstdio();
 	enable_sigio();
@@ -427,16 +426,7 @@ void jia_init(int argc, char **argv)
 	if (jia_pid != 0) sleep(1);
 }
 
-#ifdef DOSTAT
-void clearstat()
-{
-	memset((char*)&jiastat, 0, sizeof(jiastat));
-}
-#endif
-
 #else  /* NULL_LIB */
-
-#include <stdio.h>
 
 int jia_pid = 0; 
 int hostc = 1;
@@ -451,9 +441,7 @@ unsigned int t_start, t_stop = 0;
 
 unsigned int jia_startstat()
 {
-#ifdef DOSTAT
 	clearstat();
-#endif
 	t_start = get_usecs();
 	return t_start;
 }

@@ -77,6 +77,9 @@ typedef struct host_t {
 } host_t;
 
 #ifdef DOSTAT
+/**
+ * Data structure used for statistical information.
+ */
 typedef struct Stats {
 	unsigned int kernelflag;
 

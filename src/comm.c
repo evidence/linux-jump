@@ -64,15 +64,15 @@
 #include "comm.h"
 #include "mem.h"
 
-#define  BEGINCS  { sigset_t newmask, oldmask;				\
+#define  BEGINCS  { sigset_t newmask, oldmask;		\
 	sigemptyset(&newmask);				\
-	sigaddset(&newmask, SIGIO);				\
+	sigaddset(&newmask, SIGIO);			\
 	sigaddset(&newmask, SIGALRM);			\
-	sigprocmask(SIG_BLOCK, &newmask, &oldmask);		\
+	sigprocmask(SIG_BLOCK, &newmask, &oldmask);	\
 	oldsigiomask = sigismember(&oldmask, SIGIO);	\
 	sigflag = 0;					\
 }
-#define  ENDCS    { if (oldsigiomask == 0) enable_sigio();		\
+#define  ENDCS    { if (oldsigiomask == 0) enable_sigio();	\
 }
 
 #ifndef JIA_DEBUG 
@@ -81,8 +81,6 @@
 #define msgprint  1
 #endif  /* JIA_DEBUG */
 
-/*----------------------------------------------------------*/
-/* following definitions are defined by Hu */ 
 extern host_t hosts[Maxhosts];
 extern int jia_pid; 
 extern int hostc;
@@ -118,7 +116,6 @@ unsigned int interruptflag = 0;
 unsigned int intbegin;
 #endif
 
-/* following definitions are defined by Shi */
 unsigned long reqports[Maxhosts][Maxhosts], repports[Maxhosts][Maxhosts];
 CommManager commreq, commrep;
 unsigned long timeout_time;
@@ -217,7 +214,6 @@ void initcomm()
 	outcount = 0;
 
 	/* set up SIGIO and SIGINT handlers */
-
 	{ 
 		struct sigaction act;
 
@@ -355,8 +351,7 @@ void sigio_handler()
 		} else if (jiastat.kernelflag == 2) { 
 			jiastat.segvsigiocnt++; 
 		}
-	} 
-	else {
+	} else {
 		jiastat.commtime += get_usecs() - intbegin;
 		intbegin = get_usecs();
 	}
@@ -615,5 +610,4 @@ recv_again:
 	}
 } 
 /*-------------------------------------------*/
-#else  /* NULL_LIB */
 #endif /* NULL_LIB */

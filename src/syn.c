@@ -248,10 +248,12 @@ void jia_lock(int lock)
 	register unsigned int x1, x2, x3, x4, x5, x6, x7;
 #endif
 
-	if (hostc == 1) return;
+	if (hostc == 1)
+		return;
 
 #ifdef JT
-	c[1]++; x1 = get_usecs();
+	c[1]++; 
+	x1 = get_usecs();
 #endif
 
 	sigemptyset(&set);
@@ -297,7 +299,8 @@ void jia_lock(int lock)
 	pushstack(lock);
 
 #ifdef JT
-	c[4]++; x6 = get_usecs();
+	c[4]++; 
+	x6 = get_usecs();
 #endif
 
 #ifdef DOSTAT
@@ -336,10 +339,12 @@ void jia_unlock(int lock)
 	register unsigned int x1, x2, x3, x4, x5;
 #endif
 
-	if (hostc == 1) return;
+	if (hostc == 1)
+		return;
 
 #ifdef JT
-	c[5]++; x1 = get_usecs();
+	c[5]++;
+	x1 = get_usecs();
 #endif
 
 	sigemptyset(&set);
@@ -377,7 +382,8 @@ void jia_unlock(int lock)
 	enable_sigio();
 
 #ifdef JT
-	c[6]++; x2 = get_usecs();
+	c[6]++;
+	x2 = get_usecs();
 #endif
 
 	globelock = lock;
@@ -388,7 +394,8 @@ void jia_unlock(int lock)
 #endif
 
 #ifdef JT
-	c[7]++; x4 = get_usecs();
+	c[7]++;
+	x4 = get_usecs();
 #endif
 
 	popstack(lock);
@@ -435,7 +442,8 @@ void jia_barrier()
 	if (hostc == 1) return;
 
 #ifdef JT
-	c[8]++; x1 = get_usecs();
+	c[8]++;
+	x1 = get_usecs();
 #endif
 
 	sigemptyset(&set);
@@ -476,7 +484,8 @@ void jia_barrier()
 	enable_sigio();
 
 #ifdef JT
-	c[9]++; x2 = get_usecs();
+	c[9]++; 
+	x2 = get_usecs();
 #endif
 
 	savecontext(BARR);
@@ -488,27 +497,24 @@ void jia_barrier()
 	barrwait = 1;
 
 #ifdef JT
-	c[10]++; x4 = get_usecs();
+	c[10]++; 
+	x4 = get_usecs();
 #endif
 
 	sendwtnts(BARR);
 
 #ifdef JT
 	x5 = get_usecs();
-#endif
-
-#ifdef JT
-	c[11]++; x6 = get_usecs();
+	c[11]++;
+	x6 = get_usecs();
 #endif
 
 	freewtntspace(top.wtntp);
 
 #ifdef JT
 	x7 = get_usecs();
-#endif
-
-#ifdef JT
-	c[12]++; x8 = get_usecs();
+	c[12]++;
+	x8 = get_usecs();
 #endif
 
 	enable_sigio();
@@ -555,7 +561,8 @@ void jia_wait()
 {
 	jia_msg_t *req;
 
-	if (hostc == 1) return;
+	if (hostc == 1)
+		return;
 
 	req = newmsg();
 	req->frompid = jia_pid;
@@ -734,9 +741,12 @@ void savecontext(int synop)
 	}
 
 #ifdef JT
-	if (synop == ACQ) c[22]++;
-	else if (synop == REL) c[23]++;
-	else if (synop == BARR) c[24]++;
+	if (synop == ACQ)
+		c[22]++;
+	else if (synop == REL)
+		c[23]++;
+	else if (synop == BARR)
+		c[24]++;
 	x7 = get_usecs();
 #endif
 
@@ -748,13 +758,11 @@ void savecontext(int synop)
 		t[22] += (x8 - x7);
 		if (x8 - x7 > b[22]) b[22] = x8 - x7;
 		if (x8 - x7 < s[22]) s[22] = x8 - x7;
-	}
-	else if (synop == REL) {
+	} else if (synop == REL) {
 		t[23] += (x8 - x7);
 		if (x8 - x7 > b[23]) b[23] = x8 - x7;
 		if (x8 - x7 < s[23]) s[23] = x8 - x7;
-	}
-	else if (synop == BARR) {
+	} else if (synop == BARR) {
 		t[24] += (x8 - x7);
 		if (x8 - x7 > b[24]) b[24] = x8 - x7;
 		if (x8 - x7 < s[24]) s[24] = x8 - x7;

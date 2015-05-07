@@ -296,11 +296,13 @@ float jia_clock()
 				(start_time_sec * 1000000.0 - start_time_usec)) / 1000000.0);
 }
 
-/*-----------------------------------------------------------*/
+
+/**
+ * Block the SIGIO and SIGALRM signals.
+ */
 void disable_sigio() 
 {
 	sigset_t oldset;
-
 	sigemptyset(&set);
 	sigaddset(&set, SIGIO);
 	sigaddset(&set, SIGALRM);
@@ -308,6 +310,9 @@ void disable_sigio()
 	sigflag = 0;
 }
 
+/**
+ * Block the SIGALRM signal.
+ */
 void disable_sigalrm()
 {
 	sigset_t oldset;
@@ -318,13 +323,10 @@ void disable_sigalrm()
 	alarmdisabled = 1;
 }
 
-/*
-   int alarmon() {
-   return alarmdisabled;
-   }
-   */
 
-/*-----------------------------------------------------------*/
+/**
+ * Unblock the SIGIO signal.
+ */
 void enable_sigio()
 {
 	sigemptyset(&set);
@@ -333,6 +335,9 @@ void enable_sigio()
 	sigflag = 1;
 }
 
+/**
+ * Unblock the SIGALRM signal.
+ */
 void enable_sigalrm()
 {
 	alarmdisabled = 0;
