@@ -67,6 +67,10 @@
 #include <sys/sbd.h>
 #endif /* IRIX62 */
 
+#ifdef LINUX
+#include <ucontext.h>
+#endif
+
 extern void assert(int cond, char *errstr);
 extern jia_msg_t *newmsg();
 extern void freemsg();
@@ -95,7 +99,7 @@ void sigsegv_handler();
 #endif /* AIX41 || IRIX62 */
 
 #ifdef LINUX 
-void sigsegv_handler(struct sigcontext_struct);
+void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *context);
 #endif
 
 void getpserver(jia_msg_t *req);
@@ -358,7 +362,7 @@ void initmem()
 		struct sigaction act;
 		act.sa_handler = (void_func_handler)sigsegv_handler;
 		sigemptyset(&act.sa_mask);
-		act.sa_flags = SA_NOMASK;
+		act.sa_flags = SA_NODEFER|SA_SIGINFO;
 		if (sigaction(SIGSEGV, &act, NULL))
 			assert0(0,"segv sigaction problem");
 	}
@@ -610,7 +614,7 @@ void sigsegv_handler(siginfo_t *sip, ucontext_t *uap)
 void sigsegv_handler(int code, struct sigcontext *scp, char *addr) 
 #endif 
 #ifdef LINUX
-void sigsegv_handler (struct sigcontext_struct sigctx)
+void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *context)
 #endif
 {
 	address_t faultaddr;
@@ -662,9 +666,17 @@ void sigsegv_handler (struct sigcontext_struct sigctx)
 	writefault = (int)(scp->sc_cause & EXC_CODE(1));
 #endif
 #ifdef LINUX 
-	faultaddr = (address_t)sigctx.cr2;
-	faultaddr = (address_t)((unsigned long) faultaddr / Pagesize * Pagesize);
-	writefault = (int)sigctx.err &2;
+	faultaddr = (address_t) sip->si_addr;
+	ucontext_t *uctx = (ucontext_t *) context;
+	// We check the error register in mcontext_t.
+	// It is hardware-dependent (see /usr/include/sys/ucontext.h)
+#ifdef X86
+	writefault = (int)(*(unsigned *)uctx->uc_mcontext.gregs[REG_ERR] & 0x2);
+#elif ARM
+	int writefault = (((unsigned int)u->uc_mcontext.error_code & (1<<11)) >> 11);
+#else
+	#error "No architecture specified!
+#endif
 #endif
 
 	faultpage = (unsigned int) homepage(faultaddr);

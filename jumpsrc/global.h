@@ -82,7 +82,7 @@
 #include        <unistd.h>
 #include        <pwd.h>
 #include 	<signal.h>
-# define sigcontext_struct sigcontext
+#define sigcontext_struct sigcontext
 
 #ifdef SOLARIS
 #include        <sys/file.h>

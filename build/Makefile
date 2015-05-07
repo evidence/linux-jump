@@ -3,11 +3,13 @@
 #*********************************************************
 
 ARCH = linux
-ARCH_FLAGS  = -DLINUX -DCachepages=1024
+ARCH_FLAGS  = -DLINUX -D_GNU_SOURCE -DCachepages=1024 -DX86
 CC  = gcc
 CCC = gcc
 
 SRC	= ../jumpsrc 
+
+.PHONY: clean
 
 # Add -DNFS to CFLAGS to enable NFS
 CFLAGS	= -I./${SRC} $(ARCH_FLAGS) -Wall -Wextra 
