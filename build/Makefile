@@ -2,7 +2,8 @@
 #  Platform dependent rules and defines...
 #*********************************************************
 
-ARCH_FLAGS  = -DLINUX -D_GNU_SOURCE -DCachepages=1024 -DX86
+# Set -DARCH_X86 or -DARCH_ARM depending on your specific hardware
+ARCH_FLAGS  = -D_GNU_SOURCE -DCachepages=1024 -DARCH_X86
 CC  = gcc
 
 SRC	= ../jumpsrc 

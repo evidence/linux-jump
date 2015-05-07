@@ -591,9 +591,9 @@ void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *con
 	ucontext_t *uctx = (ucontext_t *) context;
 	// We check the error register in mcontext_t.
 	// It is hardware-dependent (see /usr/include/sys/ucontext.h)
-#ifdef X86
+#ifdef ARCH_X86
 	writefault = (int)(*(unsigned *)uctx->uc_mcontext.gregs[REG_ERR] & 0x2);
-#elif ARM
+#elif ARCH_ARM
 	int writefault = (((unsigned int)u->uc_mcontext.error_code & (1<<11)) >> 11);
 #else
 	#error "No architecture specified!
