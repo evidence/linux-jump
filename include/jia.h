@@ -48,9 +48,7 @@
 #ifndef JIA_PUBLIC
 #define	JIA_PUBLIC
 
-#ifndef Maxhosts
 #define Maxhosts   16
-#endif 
 #define	Maxlocks   1024
 #define	Maxcondvs  64 
 #define Intbytes   4

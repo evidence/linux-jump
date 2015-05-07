@@ -69,26 +69,22 @@
 #include        <sys/mman.h>
 #include        <sys/stat.h>
 #include        <string.h>
-
 #include        <unistd.h>
 #include        <pwd.h>
 #include 	<signal.h>
-#define sigcontext_struct sigcontext
-
 #include        <string.h>
 #include        <sys/resource.h>
-
 #include        <sys/fcntl.h>
 #include        <asm/mman.h> 
-
 #include        "jia.h"
+
+#define sigcontext_struct sigcontext
 
 typedef void (* void_func_handler)();
 
 #ifndef MAX
 #define MAX(x, y)  (((x) >= (y)) ? (x) : (y)) 
 #endif /* MAX */
-
 
 #define SPACE(right) { if ((right) == 1) 	\
 	printf("\t\t\t"); 	\

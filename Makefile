@@ -3,7 +3,7 @@
 ARCH_FLAGS  = -D_GNU_SOURCE -DCachepages=1024 -DARCH_X86
 
 export CC  = gcc
-export CFLAGS	= -I../include $(ARCH_FLAGS) -Wall -Wextra 
+export CFLAGS	= -I../include $(ARCH_FLAGS) -Wall -Wextra -pedantic
 
 .PHONY: all clean
 

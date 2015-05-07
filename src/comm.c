@@ -455,7 +455,7 @@ void sigio_handler()
 		}
 	} 
 	else intbegin = get_usecs();
-#endif //DOSTAT
+#endif /* DOSTAT */
 
 	sigprocmask(SIG_SETMASK, &oldset, NULL);   /* restore original status */
 }
