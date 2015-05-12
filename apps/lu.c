@@ -73,7 +73,7 @@ void lua()
 					   */
 				}
 			}else{
-				sprintf(luerr,"Matrix a is singular, a[%d][%d]=%lf",j,j,a[j][j]);
+				sprintf(luerr,"Matrix a is singular, a[%d][%d]=%f",j,j,a[j][j]);
 				jia_error(luerr); 
 			}
 		}
@@ -125,7 +125,7 @@ void checka()
 				new[j][i]=temp;
 
 				if (fabs(old[j][i]-new[j][i])>EPSILON){
-					printf("Incorrect! old[%d][%d]=%lf, new[%d][%d]=%lf\n",
+					printf("Incorrect! old[%d][%d]=%f, new[%d][%d]=%f\n",
 							i,j,old[j][i],i,j,new[j][i]);
 					correct = 0;
 				}
