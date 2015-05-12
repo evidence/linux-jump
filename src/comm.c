@@ -227,7 +227,7 @@ void initcomm()
 
 		act.sa_handler = (void_func_handler)sigint_handler;
 		sigemptyset(&act.sa_mask);
-		act.sa_flags = SA_NOMASK;
+		act.sa_flags = SA_NODEFER;
 		if (sigaction(SIGINT, &act, NULL)) {
 			assert0(0, "segv sigaction problem");  
 		}
