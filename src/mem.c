@@ -83,7 +83,7 @@ void flushpage(int cachei);
 int replacei(int cachei);
 int findposition(address_t addr);
 
-void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *context);
+void sigsegv_handler (int sig, siginfo_t *sip, void *context);
 
 void getpserver(jia_msg_t *req);
 void getpgrantserver(jia_msg_t *req);
@@ -335,7 +335,8 @@ void initmem()
 			assert0(0,"segv sigaction problem");
 	}
 
-	for (i = 0; i < Setnum; i++) repcnt[i] = 0;
+	for (i = 0; i < Setnum; i++)
+		repcnt[i] = 0;
 	srand(1);
 
 #ifdef DOSTAT
@@ -553,13 +554,15 @@ int findposition(address_t addr)
 unsigned char temppage[Pagesize];
 volatile int mapped, tempcopy = 0;
 
-void sigsegv_handler (struct sigcontext_struct sigctx, siginfo_t *sip, void *context)
+void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 {
 	address_t faultaddr;
 	int writefault, cachei, temp, flaggy;
 	unsigned int faultpage;
 	sigset_t set, oldset;
 	ucontext_t *uctx = (ucontext_t *) context;
+	if ((sip == NULL) || (context == NULL))
+		fprintf(stderr, "ERROR: NULL parameters to sigsegv_handler!");
 
 #ifdef DOSTAT
 	register unsigned int begin;
