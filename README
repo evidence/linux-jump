@@ -32,3 +32,12 @@
 
    The application binary must be put and started from <username>'s home
    directory.
+
+   To enable automatic login between the machines:
+
+        mkdir .ssh
+        cd .ssh
+        ssh-keygen -t rsa
+        cat id_rsa.pub | ssh <user>@<machine> 'cat >> .ssh/authorized_keys'
+
+   See http://www.linuxproblem.org/art_9.html
