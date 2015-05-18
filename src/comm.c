@@ -67,7 +67,8 @@
 /**
  * BEGINCS begins a critical section by disabling SIGIO and SIGALRM signals.
  */
-#define  BEGINCS  { sigset_t newmask, oldmask;		\
+#define  BEGINCS  {					\
+	sigset_t newmask, oldmask;			\
 	sigemptyset(&newmask);				\
 	sigaddset(&newmask, SIGIO);			\
 	sigaddset(&newmask, SIGALRM);			\
@@ -79,14 +80,10 @@
 /**
  * ENDCS ends the critical section by restoring the SIGIO signal.
  */
-#define  ENDCS    { if (oldsigiomask == 0) enable_sigio();	\
+#define  ENDCS {				\
+	if (oldsigiomask == 0)			\
+		enable_sigio();			\
 }
-
-#ifndef JIA_DEBUG 
-#define msgprint  0 
-#else   /* JIA_DEBUG */
-#define msgprint  1
-#endif  /* JIA_DEBUG */
 
 extern host_t hosts[Maxhosts];
 extern int jia_pid; 
@@ -135,8 +132,6 @@ long Startport;
 char errmsg[80] = {'\0'};
 
 void initcomm();
-int req_fdcreate(int, int);
-int rep_fdcreate(int, int);
 
 void sigio_handler();
 
@@ -155,7 +150,9 @@ extern void enable_sigio();
 extern sigset_t oldset;
 int oldsigiomask;
 
-/*---------------------------------------------------------*/
+/**
+ * Open socket the for exchanging pages
+ */
 int req_fdcreate(int i, int flag)
 {   
 	int fd, res, size;
@@ -206,6 +203,7 @@ int rep_fdcreate(int i, int flag)  /* acknowledgement sockets */
 void initcomm()
 {
 	int i, j, fd;
+	struct sigaction act;
 
 	msgcnt = 0;	
 	for (i = 0; i < Maxmsgs; i++) {
@@ -221,23 +219,19 @@ void initcomm()
 	outcount = 0;
 
 	/* set up SIGIO and SIGINT handlers */
-	{ 
-		struct sigaction act;
+	act.sa_handler = (void_func_handler)sigio_handler;
+	sigemptyset(&act.sa_mask);
+	sigaddset(&act.sa_mask, SIGALRM);
+	act.sa_flags = SA_RESTART;   /* Must be here for Linux 2.2 */
 
-		act.sa_handler = (void_func_handler)sigio_handler;
-		sigemptyset(&act.sa_mask);
-		sigaddset(&act.sa_mask, SIGALRM);
-		act.sa_flags = SA_RESTART;   /* Must be here for Linux 2.2 */
+	if (sigaction(SIGIO, &act, NULL))
+		assert0(0, "initcomm()-->sigaction()");
 
-		if (sigaction(SIGIO, &act, NULL))
-			assert0(0, "initcomm()-->sigaction()");
-
-		act.sa_handler = (void_func_handler)sigint_handler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = SA_NODEFER;
-		if (sigaction(SIGINT, &act, NULL)) {
-			assert0(0, "segv sigaction problem");  
-		}
+	act.sa_handler = (void_func_handler)sigint_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_NODEFER;
+	if (sigaction(SIGINT, &act, NULL)) {
+		assert0(0, "segv sigaction problem");  
 	}
 
 	/***********Initialize comm ports********************/

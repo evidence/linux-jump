@@ -108,7 +108,8 @@ void assert0(int cond, char *amsg)
 	if (!cond) {
 		fprintf(stderr,"Assert0 error from host %d --- %s\n", jia_pid, amsg);
 		perror("Unix Error");
-		fflush(stderr); fflush(stdout);
+		fflush(stderr); 
+		fflush(stdout);
 		exit(-1);
 	}
 }

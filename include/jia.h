@@ -48,16 +48,18 @@
 #ifndef JIA_PUBLIC
 #define	JIA_PUBLIC
 
-#define Maxhosts   16
+#define Maxhosts   16		/* Maximum number of hosts */
 #define	Maxlocks   1024
 #define	Maxcondvs  64 
 #define Intbytes   4
 #define Intbits    32
 #define Shortbytes 2
 #define Pagesize   4096
+
 #ifndef Cachepages
 #define Cachepages 1024
 #endif
+
 #define Startaddr   0x60000000
 #define Maxmemsize  0x08000000  
 #define Maxmempages (Maxmemsize / Pagesize)
