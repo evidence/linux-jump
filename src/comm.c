@@ -64,6 +64,9 @@
 #include "comm.h"
 #include "mem.h"
 
+/**
+ * BEGINCS begins a critical section by disabling SIGIO and SIGALRM signals.
+ */
 #define  BEGINCS  { sigset_t newmask, oldmask;		\
 	sigemptyset(&newmask);				\
 	sigaddset(&newmask, SIGIO);			\
@@ -72,6 +75,10 @@
 	oldsigiomask = sigismember(&oldmask, SIGIO);	\
 	sigflag = 0;					\
 }
+
+/**
+ * ENDCS ends the critical section by restoring the SIGIO signal.
+ */
 #define  ENDCS    { if (oldsigiomask == 0) enable_sigio();	\
 }
 
@@ -107,7 +114,7 @@ extern void diffgrantserver(jia_msg_t *);
 extern void getpgrantserver(jia_msg_t *);
 extern void emptyprintf();
 
-extern void printmsg(jia_msg_t *, int);
+extern void debugmsg(jia_msg_t *, int);
 extern jia_msg_t *newmsg();
 
 #ifdef DOSTAT
@@ -316,7 +323,7 @@ void msgserver()
 		case STAT:      statserver(&inqh);      break;
 		case STATGRANT: statgrantserver(&inqh); break;
 #endif 
-		default:        printmsg(&inqh, 1);
+		default:        debugmsg(&inqh, 1);
 				assert0(0, "msgserver(): Incorrect Message!");
 				break;
 	}
@@ -404,7 +411,7 @@ void sigio_handler()
 						}
 #endif
 						commreq.rcv_seq[i] = inqt.seqno;
-						if (msgprint == 1) printmsg(&inqt, 1);
+						debugmsg(&inqt, 1);
 						BEGINCS;
 						intail = (intail + 1) % Maxqueue;
 						incount++;
@@ -412,7 +419,7 @@ void sigio_handler()
 						ENDCS;
 					}
 					else {
-						if (msgprint == 1) printmsg(&inqt, 1);
+						debugmsg(&inqt, 1);
 						printf("Receive resend message!\n");
 					}
 				}
@@ -503,7 +510,7 @@ void outsend()
 	fd_set readfds;
 	int servemsg;
 
-	if (msgprint == 1) printmsg(&outqh, 0);
+	debugmsg(&outqh, 0);
 
 	toproc = outqh.topid;
 	fromproc = outqh.frompid;
@@ -513,7 +520,7 @@ void outsend()
 		assert0((incount <= Maxqueue), "outsend(): Inqueue exceeded!");
 		commreq.rcv_seq[toproc] = outqh.seqno;
 		memcpy(&(inqt), &(outqh), Msgheadsize + outqh.size);
-		if (msgprint == 1) printmsg(&(inqt), 1);
+		debugmsg(&(inqt), 1);
 		incount++;
 		intail = (intail + 1) % Maxqueue;
 		servemsg = (incount == 1) ? 1 : 0;

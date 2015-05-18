@@ -72,7 +72,6 @@ void jiaexitserver(jia_msg_t *req);
 jia_msg_t *newmsg();
 void freemsg(jia_msg_t *msg);
 void appendmsg(jia_msg_t *msg, const void *str, int len);
-void printmsg(jia_msg_t *msg,int right);
 void printstack(int ptr);
 unsigned long jia_current_time();
 float jia_clock();
@@ -227,7 +226,8 @@ void freewtntspace(wtnt_t *ptr)
 }
 
 /*-----------------------------------------------------------*/
-void printmsg(jia_msg_t *msg, int right)
+#ifdef JIA_DEBUG 
+void debugmsg(jia_msg_t *msg, int right)
 { 
 	SPACE(right); printf("********Print message********\n");
 	SPACE(right); switch (msg->op) {
@@ -257,6 +257,9 @@ void printmsg(jia_msg_t *msg, int right)
 	SPACE(right); printf("msg.data    = 0x%8lx\n",stol(msg->data+4));
 	SPACE(right); printf("msg.data    = 0x%8lx\n",stol(msg->data+8));
 }
+#else
+void debugmsg(jia_msg_t *msg, int right){}
+#endif /* JIA_DEBUG */
 
 /*-----------------------------------------------------------*/
 /* Following programs are used by Shi. 9.10 */
