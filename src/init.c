@@ -65,7 +65,7 @@
 extern void initmem();
 extern void initsyn();
 extern void initcomm();
-extern void disable_sigio();         
+extern void disable_sigio_sigalrm();         
 extern void enable_sigio();       
 extern unsigned long jia_current_time();
 extern void assert0(int, char *);
@@ -401,7 +401,7 @@ void jia_init(int argc, char **argv)
 	struct rlimit rl;
 
 	strcpy(argv0, argv[0]);
-	disable_sigio();
+	disable_sigio_sigalrm();
 	jia_lock_index = 0;  
 	jiacreat(argc, argv);
 	sleep(2);

@@ -76,7 +76,7 @@ void printstack(int ptr);
 unsigned long jia_current_time();
 float jia_clock();
 void jiasleep(unsigned long);
-void disable_sigio();         
+void disable_sigio_sigalrm();         
 void disable_sigalrm();         
 void enable_sigalrm();       
 void enable_sigio();       
@@ -304,7 +304,7 @@ float jia_clock()
 /**
  * Block the SIGIO and SIGALRM signals.
  */
-void disable_sigio() 
+void disable_sigio_sigalrm() 
 {
 	sigset_t oldset;
 	sigemptyset(&set);

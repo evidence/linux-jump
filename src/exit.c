@@ -63,7 +63,6 @@ extern CommManager commreq, commrep;
 /* it's a good practice to close the FDs after use :) */
 
 extern unsigned long s2l(unsigned char *str);
-extern unsigned int t_start, t_stop;
 
 #ifdef JT
 extern unsigned int t[70], b[70], c[70], s[70];

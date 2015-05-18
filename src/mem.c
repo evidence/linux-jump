@@ -38,6 +38,9 @@
  *         University of Alberta                                       *
  *         Dept. of Computing Science                                  *
  *         Edmonton, Alberta T6G 2H1 CANADA                            *
+ *                                                                     *
+ *   Ported to ARM Linux by Evidence Srl (www.evidence.eu.com)         * 
+ *                                                                     *
  * =================================================================== *
  * $Log: mem.c,v $
  * Revision 1.2  1998/03/06 05:07:16  dsm
@@ -72,42 +75,20 @@ extern void savepage(int cachei);
 extern address_t newtwin();
 extern void freetwin(address_t twin);
 extern void enable_sigio();
-extern void disable_sigio();
+extern void disable_sigio_sigalrm();
 extern void appendmsg(jia_msg_t *msg, unsigned char *str, int len);
 extern void assert0(int cond, char *amsg);
 
-void initmem();
-void getpage(address_t addr, int writeflag);
-int xor(address_t addr);
-void flushpage(int cachei);
-int replacei(int cachei);
+
 int findposition(address_t addr);
-
-void sigsegv_handler (int sig, siginfo_t *sip, void *context);
-
-void getpserver(jia_msg_t *req);
-void getpgrantserver(jia_msg_t *req);
-unsigned long s2l(unsigned char *str);
-unsigned long s2s(unsigned char *str);
-void diffserver(jia_msg_t *req);
-void diffgrantserver(jia_msg_t *req);
+unsigned char temppage[Pagesize];
+volatile int mapped, tempcopy = 0;
 
 /* Using a new data structure (linked-list representation by array) */
 /* for faster access of page control structures			    */
-void insert(int i);
-void insert2(int i);
-void insert3(int i);
-void dislink(int i);
-void dislink2(int i);
-void dislink3(int i);
 short int head, tail, pendprev[Maxmempages], pendnext[Maxmempages];
 short int head2, tail2, pendprev2[Maxmempages], pendnext2[Maxmempages];
 short int head3, tail3, pendprev3[Cachepages], pendnext3[Cachepages];
-
-int encodediff(int diffi, unsigned char* diff, int dflag);
-void senddiffs();
-void savediff(int cachei, int dflag);
-void savehomechange();
 
 unsigned int SpecialAddr;
 unsigned int oaccess[Maxlocks][LENGTH];
@@ -157,12 +138,11 @@ jia_msg_t *diffmsg[Maxhosts];
 
 void insert(int i)
 {
-	if (head == -1 && tail == -1) {
+	if ((head == -1) && (tail == -1)) {
 		pendnext[i] = -1;
 		pendprev[i] = -1;
 		head = tail = i;
-	}
-	else {
+	} else {
 		pendprev[i] = tail;
 		pendnext[tail] = i;
 		pendnext[i] = -1;
@@ -174,37 +154,33 @@ void dislink(int i)
 {
 	int p, n;
 
-	if (head == -1 && tail == -1)
+	if (head == -1 && tail == -1){
 		printf("Dislink: Nothing to dislink\n");
-	else
-		if (head == i && tail == i)
+	} else {
+		if ((head == i) && (tail == i)) {
 			head = tail = -1;
-		else
-			if (head == i) {
-				head = pendnext[head];
-				pendprev[head] = -1;
-			}
-			else
-				if (tail == i) {
-					tail = pendprev[tail];
-					pendnext[tail] = -1;
-				}
-				else { 
-					p = pendprev[i];
-					n = pendnext[i];
-					pendprev[n] = p;
-					pendnext[p] = n;
-				}
+		} else if (head == i) {
+			head = pendnext[head];
+			pendprev[head] = -1;
+		} else 	if (tail == i) {
+			tail = pendprev[tail];
+			pendnext[tail] = -1;
+		} else { 
+			p = pendprev[i];
+			n = pendnext[i];
+			pendprev[n] = p;
+			pendnext[p] = n;
+		}
+	}
 }
 
 void insert2(int i)
 {
-	if (head2 == -1 && tail2 == -1) {
+	if ((head2 == -1) && (tail2 == -1)) {
 		pendnext2[i] = -1;
 		pendprev2[i] = -1;
 		head2 = tail2 = i;
-	}
-	else {
+	} else {
 		pendprev2[i] = tail2;
 		pendnext2[tail2] = i;
 		pendnext2[i] = -1;
@@ -216,27 +192,22 @@ void dislink2(int i)
 {
 	int p, n;
 
-	if (head2 == -1 && tail2 == -1)
+	if (head2 == -1 && tail2 == -1) {
 		printf("Dislink2: Nothing to dislink2\n");
-	else
-		if (head2 == i && tail2 == i)
-			head2 = tail2 = -1;
-		else
-			if (head2 == i) {
-				head2 = pendnext2[head2];
-				pendprev2[head2] = -1;
-			}
-			else
-				if (tail2 == i) {
-					tail2 = pendprev2[tail2];
-					pendnext2[tail2] = -1;
-				}
-				else { 
-					p = pendprev2[i];
-					n = pendnext2[i];
-					pendprev2[n] = p;
-					pendnext2[p] = n;
-				}
+	} else if (head2 == i && tail2 == i) {
+		head2 = tail2 = -1;
+	} else if (head2 == i) {
+		head2 = pendnext2[head2];
+		pendprev2[head2] = -1;
+	} else if (tail2 == i) {
+		tail2 = pendprev2[tail2];
+		pendnext2[tail2] = -1;
+	} else { 
+		p = pendprev2[i];
+		n = pendnext2[i];
+		pendprev2[n] = p;
+		pendnext2[p] = n;
+	}
 }
 
 void insert3(int i)
@@ -245,8 +216,7 @@ void insert3(int i)
 		pendnext3[i] = -1;
 		pendprev3[i] = -1;
 		head3 = tail3 = i;
-	}
-	else {
+	} else {
 		pendprev3[i] = tail3;
 		pendnext3[tail3] = i;
 		pendnext3[i] = -1;
@@ -258,28 +228,378 @@ void dislink3(int i)
 {
 	int p, n;
 
-	if (head3 == -1 && tail3 == -1)
+	if (head3 == -1 && tail3 == -1) {
 		printf("Dislink3: Nothing to dislink3\n");
-	else
-		if (head3 == i && tail3 == i)
-			head3 = tail3 = -1;
-		else
-			if (head3 == i) {
-				head3 = pendnext3[head3];
-				pendprev3[head3] = -1;
-			}
-			else
-				if (tail3 == i) {
-					tail3 = pendprev3[tail3];
-					pendnext3[tail3] = -1;
-				}
-				else { 
-					p = pendprev3[i];
-					n = pendnext3[i];
-					pendprev3[n] = p;
-					pendnext3[p] = n;
-				}
+	} else if (head3 == i && tail3 == i) {
+		head3 = tail3 = -1;
+	} else if (head3 == i) {
+		head3 = pendnext3[head3];
+		pendprev3[head3] = -1;
+	} else if (tail3 == i) {
+		tail3 = pendprev3[tail3];
+		pendnext3[tail3] = -1;
+	} else { 
+		p = pendprev3[i];
+		n = pendnext3[i];
+		pendprev3[n] = p;
+		pendnext3[p] = n;
+	}
 }
+
+/* Right now, the writeflag is always set to 1, which is needed for  */
+/* efficiency purpose of the migrating-home protocol in general case */
+void getpage(address_t addr, int writeflag)
+{
+	int homeid;
+	jia_msg_t *req;
+	int pagei, i, j, k, flag;
+
+	homeid = homehost(addr);
+
+#ifdef MHPDEBUG
+	assert((homeid != jia_pid), "This should not have happened (2)");
+#endif
+
+	req = newmsg();
+	req->op = GETP;
+	req->frompid = jia_pid;
+	req->topid = homeid;
+	req->size = 0;
+	appendmsg(req, ltos(addr), Intbytes);
+	appendmsg(req, ltos(writeflag), Intbytes);
+
+	/* if one of the locks held by the requesting proc has accessed the */
+	/* required page before without propagating the diffs, we shouldn't */
+	/* get the copy from the prev home -- hence flag should be set to 1 */
+	flag = 0;
+	pagei = homepage(addr);
+	for (i = 1; i <= stackptr && flag == 0; i++) {
+		j = lockstack[i].lockid;
+		k = oaccess[j][pagei / CHARBITS];
+		if ((k >> (pagei % CHARBITS)) % 2 == 1)
+			flag = 1;
+	}
+	appendmsg(req, ltos(flag), Intbytes);
+
+	getpwait = 1;
+	asendmsg(req);
+	freemsg(req);
+}
+
+
+/**
+ * Handler for the SIGSEGV signal.
+ */
+void sigsegv_handler (int sig, siginfo_t *sip, void *context)
+{
+	address_t faultaddr;
+	int writefault, cachei, temp, flaggy;
+	unsigned int faultpage;
+	sigset_t set, oldset;
+	ucontext_t *uctx = (ucontext_t *) context;
+	fprintf(stderr, "sigsegv_handler: received signal %d\n", sig);
+	if ((sip == NULL) || (context == NULL))
+		fprintf(stderr, "ERROR: NULL parameters to sigsegv_handler!");
+
+#ifdef DOSTAT
+	register unsigned int begin;
+#endif
+
+#ifdef JT
+	register unsigned int x1, x2, x3;
+	x1 = get_usecs();
+#endif
+
+	/* We should not allow any other events to interrupt SIGSEGV.
+	 * Therefore, we block the SIGALRM signal.*/
+	sigemptyset(&set);
+	sigaddset(&set, SIGALRM);
+	sigprocmask(SIG_BLOCK, &set, &oldset);
+
+#ifdef DOSTAT
+	begin = get_usecs();
+	jiastat.kernelflag = 2;
+#endif
+
+#ifdef JT
+	x3 = 0;
+#endif
+
+	/* We unblock the SIGIO signal: */
+	sigemptyset(&set);
+	sigaddset(&set, SIGIO);
+	sigprocmask(SIG_UNBLOCK, &set, NULL);
+
+	faultaddr = (address_t) sip->si_addr;
+	/* We check the error register in mcontext_t.
+	   It is hardware-dependent (see /usr/include/sys/ucontext.h) */
+#ifdef ARCH_X86
+	writefault = (int)(*(unsigned *)uctx->uc_mcontext.gregs[REG_ERR] & 0x2);
+#elif defined ARCH_ARM
+	writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
+#else
+	#error "No architecture specified!"
+#endif
+
+	faultpage = (unsigned int) homepage(faultaddr);
+	sprintf(errstr, "Access shared memory out of range from 0x%x to 0x%lx!, faultaddr = 0x%lx, writefault = 0x%x", Startaddr,
+			Startaddr + globaladdr, (unsigned long int) faultaddr, writefault);
+	assert((((unsigned long)faultaddr < (Startaddr + globaladdr)) && 
+				((unsigned long)faultaddr >= Startaddr)), errstr);
+
+#ifdef DOSTAT
+	if (writefault)
+		wfaultcnt++;
+	else 
+		rfaultcnt++;
+#endif
+
+	disable_sigio_sigalrm();  /* We should not let SIGIO interrupt again */
+
+	if (homehost(faultaddr) == jia_pid) {
+		/* Local SEGV -- RW request on Read-only home page */
+#ifdef DOSTAT
+		jiastat.segvLcnt++;
+#endif
+
+		memprotect((caddr_t)faultaddr, Pagesize, PROT_READ | PROT_WRITE);
+		if (page[faultpage].wtnt == 0) {
+			page[faultpage].wtnt = 1;
+			insert2(faultpage);
+		}
+		temp = page[faultpage].oldhome;
+
+		if (temp == Maxhosts) {
+			if (!writefault) {
+				assert((0 == 1), "Unexpected error 5-1!\n");
+			} else {
+
+#ifdef MHPDEBUG
+				if (!(page[faultpage].state == RO &&
+							page[faultpage].pend[jia_pid] == 0)) {
+					sprintf(errstr, 
+							"Error 5-2: Page %d, state %d (RO), pend[%d] = %d (0).\n",
+							faultpage, page[faultpage].state,
+							jia_pid, page[faultpage].pend[jia_pid]);
+					assert((0 == 1), errstr);
+				}
+#endif
+
+				if (page[faultpage].pend[jia_pid] == 0) {
+					page[faultpage].pend[jia_pid]++;
+					insert(faultpage);
+				} else {
+					printf("Logic bug: Page %d already pended %d\n", faultpage,
+							page[faultpage].pend[jia_pid]);
+				}
+			}
+		}
+		page[faultpage].state = RW;
+
+		enable_sigio();
+
+#ifdef DOSTAT
+		jiastat.segvLtime += get_usecs() - begin;
+		jiastat.kernelflag = 0;
+#endif
+
+	} else {   /* Non-local Page-Fault */
+		enable_sigio();
+
+#ifdef DOSTAT
+		jiastat.segvRcnt++;
+#endif
+
+		/* Find if page is cached */
+		cachei = (int)page[((unsigned long)faultaddr - Startaddr)
+			/ Pagesize].cachei;
+		if (cachei < Cachepages) {   /* Found in cache */
+			memprotect((caddr_t)faultaddr, Pagesize, PROT_READ | PROT_WRITE);
+
+			if (!((writefault) && (cache[cachei].state == RO))) {
+				/* If it is a writefault and cache copy is read-only */
+				/* we should not ask the protocol to use the cache space */
+				mapped = 1;
+
+#ifdef DOSTAT
+				if (writefault)
+					rw1++; 
+				else 
+					rr1++;
+#endif
+#ifdef JT
+				x3 = 1;
+#endif
+				getpage(faultaddr, 1);
+			} else {
+
+#ifdef DOSTAT
+				if (writefault) 
+					rw2++; 
+				else 
+					rr2++;
+#endif
+				tempcopy = 0;
+			}
+		} else {
+			if (page[faultpage].state == UNMAP) {
+				mapped = 0;
+			} else { 
+				mapped = 1;
+			}
+			if (mapped == 0) {
+				memmap(faultaddr, Pagesize, PROT_READ | PROT_WRITE,
+						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
+			} else {
+				memprotect((caddr_t)faultaddr, (size_t)Pagesize,
+						PROT_READ | PROT_WRITE);
+			}
+			mapped = 1;
+
+			disable_sigio_sigalrm();
+
+			temp = page[faultpage].oldhome;
+			if (!((page[faultpage].state == RO) && (temp == jia_pid))) {
+
+#ifdef DOSTAT
+				if (writefault)
+					rw3++;
+				else
+					rr3++; 
+#endif
+				enable_sigio();
+
+#ifdef JT
+				x3 = 1;
+#endif
+				getpage(faultaddr, 1);
+			} else {
+				disable_sigio_sigalrm();
+				page[faultpage].pend[jia_pid] = 1;
+				insert(faultpage);
+				enable_sigio();
+
+#ifdef MHPDEBUG
+				if (!(page[faultpage].pend[jia_pid] == 1 &&
+							page[faultpage].oldhome == jia_pid && writefault))
+				{
+					sprintf(errstr, 
+							"Error: page[%d].pend[%d] = %d, oldhome %d (%d), wf %d.\n",
+							faultpage, jia_pid, 
+							page[faultpage].pend[jia_pid],
+							page[faultpage].oldhome, jia_pid, writefault);
+					assert((0 == 1), errstr);
+				}
+#endif
+
+#ifdef DOSTAT
+				if (writefault)
+					rw4++;
+				else
+					rr4++;
+#endif
+				enable_sigio();
+			}
+			cachei = findposition(faultaddr);
+		}
+
+		if (writefault) {
+			cache[cachei].addr = faultaddr;
+			cache[cachei].state = RW;
+			while(getpwait);    /* wait page to come */
+
+			if (homehost(faultaddr) == jia_pid) {
+				cache[cachei].addr = 0;   /* page become home, no need to cache */
+				disable_sigio_sigalrm();
+				if (cache[cachei].wtnt == 1) {
+					cache[cachei].wtnt = 0;
+					dislink3(cachei);
+				}
+				enable_sigio();
+
+				cache[cachei].state = UNMAP;
+				page[faultpage].cachei = Cachepages;
+				page[faultpage].state = RW;
+
+				disable_sigio_sigalrm();
+				if (page[faultpage].wtnt == 0) {
+					page[faultpage].wtnt = 1;
+					insert2(faultpage);
+				}
+				enable_sigio();
+				flaggy = 0;
+			} else {
+				disable_sigio_sigalrm();
+				if (cache[cachei].wtnt == 0) {
+					cache[cachei].wtnt = 1;
+					insert3(cachei);
+				}
+				enable_sigio();
+				flaggy = 1;
+			}
+			/* create twin */
+			if (homehost(faultaddr) != jia_pid)
+				cache[cachei].twin = newtwin();
+			/* bring page content from temp buffer */
+			if (tempcopy == 1)
+				memcpy(faultaddr, temppage, Pagesize);
+			/* duplicate the twin */
+			if (homehost(faultaddr) != jia_pid)
+				memcpy(cache[cachei].twin, faultaddr, Pagesize);
+		} else {   /* a read fault */
+			cache[cachei].addr = faultaddr;
+			cache[cachei].state = RO;
+			/* wait for page to come */
+			while(getpwait);
+			if (homehost(faultaddr) == jia_pid) {
+				cache[cachei].addr = 0;
+
+				disable_sigio_sigalrm();
+				if (cache[cachei].wtnt == 1) {
+					cache[cachei].wtnt = 0;
+					dislink3(cachei);
+				}
+				enable_sigio();
+
+				cache[cachei].state = UNMAP;
+				page[faultpage].cachei = Cachepages;
+				page[faultpage].state = RO;
+				flaggy = 0;
+			} else {
+				disable_sigio_sigalrm();
+				if (cache[cachei].wtnt == 0) {
+					cache[cachei].wtnt = 1;
+					insert3(cachei);
+				}
+				enable_sigio();
+				flaggy = 1;
+			}
+			if (tempcopy == 1)
+				memcpy(faultaddr, temppage, Pagesize);
+			memprotect((caddr_t)faultaddr, (size_t)Pagesize, PROT_READ);
+			if (flaggy == 1)
+				page[faultpage].state = MAP; 
+		}
+
+#ifdef DOSTAT
+		jiastat.segvRtime += get_usecs() - begin;
+		jiastat.kernelflag = 0;
+#endif
+	}
+
+#ifdef JT
+	x2 = get_usecs();
+	t[64 + x3] += (x2 - x1);
+	if (x2 - x1 > b[64 + x3])
+		b[64 + x3] = x2 - x1;
+	if (x2 - x1 < s[64 + x3])
+		s[64 + x3] = x2 - x1;
+	c[64 + x3]++;
+#endif
+
+	sigprocmask(SIG_SETMASK, &oldset, NULL);
+}
+
 
 /* Initialization routine */
 void initmem()
@@ -380,14 +700,12 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 			assert((hosts[homepid].homesize + mapsize)
 					< (Maxmempages * Pagesize), "Too many home pages");
 			if (hostc > 1) {
-				memmap(Startaddr + globaladdr, mapsize, PROT_READ,
+				memmap(Startaddr + globaladdr, mapsize, PROT_READ, 
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
-			}
-			else {
+			} else {
 				memmap(Startaddr + globaladdr, mapsize, PROT_READ | PROT_WRITE,
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
 			}
-
 			for (i = 0; i < mapsize; i += Pagesize) {
 				pagei = (globaladdr + i) / Pagesize;
 				page[pagei].addr = (address_t)(Startaddr + globaladdr + i);
@@ -427,45 +745,6 @@ unsigned long jia_alloc2(int size, int block)
 	return(jia_alloc3(size, block, 0));
 }
 
-/* Right now, the writeflag is always set to 1, which is needed for  */
-/* efficiency purpose of the migrating-home protocol in general case */
-void getpage(address_t addr, int writeflag)
-{
-	int homeid;
-	jia_msg_t *req;
-	int pagei, i, j, k, flag;
-
-	homeid = homehost(addr);
-
-#ifdef MHPDEBUG
-	assert((homeid != jia_pid), "This should not have happened (2)");
-#endif
-
-	req = newmsg();
-	req->op = GETP;
-	req->frompid = jia_pid;
-	req->topid = homeid;
-	req->size = 0;
-	appendmsg(req, ltos(addr), Intbytes);
-	appendmsg(req, ltos(writeflag), Intbytes);
-
-	/* if one of the locks held by the requesting proc has accessed the */
-	/* required page before without propagating the diffs, we shouldn't */
-	/* get the copy from the prev home -- hence flag should be set to 1 */
-	flag = 0;
-	pagei = homepage(addr);
-	for (i = 1; i <= stackptr && flag == 0; i++) {
-		j = lockstack[i].lockid;
-		k = oaccess[j][pagei / CHARBITS];
-		if ((k >> (pagei % CHARBITS)) % 2 == 1)
-			flag = 1;
-	}
-	appendmsg(req, ltos(flag), Intbytes);
-
-	getpwait = 1;
-	asendmsg(req);
-	freemsg(req);
-}
 
 int xor(address_t addr)
 {
@@ -504,7 +783,7 @@ void flushpage(int cachei)
 	if (cache[cachei].state == RW) freetwin(cache[cachei].twin);
 	cache[cachei].state = UNMAP;
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	if (cache[cachei].wtnt == 1) {
 		cache[cachei].wtnt=0;
 		dislink3(cachei);
@@ -513,6 +792,37 @@ void flushpage(int cachei)
 
 	cache[cachei].addr = 0;
 }
+
+
+void senddiffs()
+{
+	int hosti;
+
+#ifdef JT
+	register unsigned int x1, x2;
+	x1 = get_usecs();
+#endif
+
+	for (hosti = 0; hosti < hostc; hosti++) {
+		if (diffmsg[hosti] != DIFFNULL) {
+			if (diffmsg[hosti]->size > 0) {
+				diffwait++;
+				asendmsg(diffmsg[hosti]);
+			}
+			freemsg(diffmsg[hosti]);
+			diffmsg[hosti] = DIFFNULL;
+		}
+	}
+
+#ifdef JT
+	x2 = get_usecs();
+	t[63] += (x2 - x1);
+	if (x2 - x1 > b[63]) b[63] = x2 - x1;
+	if (x2 - x1 < s[63]) s[63] = x2 - x1;
+	c[63]++;
+#endif
+}
+
 
 int findposition(address_t addr)
 {
@@ -551,311 +861,36 @@ int findposition(address_t addr)
 	return(cachei + seti);
 }
 
-unsigned char temppage[Pagesize];
-volatile int mapped, tempcopy = 0;
 
-void sigsegv_handler (int sig, siginfo_t *sip, void *context)
+/* we may do this inline for faster access */
+unsigned long s2l(unsigned char *str)
 {
-	address_t faultaddr;
-	int writefault, cachei, temp, flaggy;
-	unsigned int faultpage;
-	sigset_t set, oldset;
-	ucontext_t *uctx = (ucontext_t *) context;
-	if ((sip == NULL) || (context == NULL))
-		fprintf(stderr, "ERROR: NULL parameters to sigsegv_handler!");
+	union {
+		unsigned long l;
+		unsigned char c[Intbytes];
+	} notype;
 
-#ifdef DOSTAT
-	register unsigned int begin;
-#endif
-
-#ifdef JT
-	register unsigned int x1, x2, x3;
-	x1 = get_usecs();
-#endif
-
-	/* should not allow any other events to interrupt SIGSEGV */
-	sigemptyset(&set);
-	sigaddset(&set, SIGALRM);
-	sigprocmask(SIG_BLOCK, &set, &oldset);
-
-#ifdef DOSTAT
-	begin = get_usecs();
-	jiastat.kernelflag = 2;
-#endif
-
-#ifdef JT
-	x3 = 0;
-#endif
-
-	sigemptyset(&set);
-	sigaddset(&set, SIGIO);
-	sigprocmask(SIG_UNBLOCK, &set, NULL);
-
-	faultaddr = (address_t) sip->si_addr;
-	/* We check the error register in mcontext_t.
-	   It is hardware-dependent (see /usr/include/sys/ucontext.h) */
-#ifdef ARCH_X86
-	writefault = (int)(*(unsigned *)uctx->uc_mcontext.gregs[REG_ERR] & 0x2);
-#elif defined ARCH_ARM
-	writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
-#else
-	#error "No architecture specified!"
-#endif
-
-	faultpage = (unsigned int) homepage(faultaddr);
-	sprintf(errstr, "Access shared memory out of range from 0x%x to 0x%lx!, faultaddr = 0x%lx, writefault = 0x%x", Startaddr,
-			Startaddr + globaladdr, (unsigned long int) faultaddr, writefault);
-	assert((((unsigned long)faultaddr < (Startaddr + globaladdr)) && 
-				((unsigned long)faultaddr >= Startaddr)), errstr);
-
-	if (writefault) {
-#ifdef DOSTAT
-		wfaultcnt++;
-#endif
-	}
-	else { 
-#ifdef DOSTAT
-		rfaultcnt++;
-#endif
-	}
-
-	disable_sigio();  /* should not let SIGIO interrupt again */
-
-	if (homehost(faultaddr) == jia_pid) {
-		/* Local SEGV -- RW request on Read-only home page */
-#ifdef DOSTAT
-		jiastat.segvLcnt++;
-#endif
-
-		memprotect((caddr_t)faultaddr, Pagesize, PROT_READ | PROT_WRITE);
-		if (page[faultpage].wtnt == 0) {
-			page[faultpage].wtnt = 1;
-			insert2(faultpage);
-		}
-		temp = page[faultpage].oldhome;
-
-		if (temp == Maxhosts) {
-			if (!writefault)
-				assert((0 == 1), "Unexpected error 5-1!\n");
-			else {
-
-#ifdef MHPDEBUG
-				if (!(page[faultpage].state == RO &&
-							page[faultpage].pend[jia_pid] == 0)) {
-					sprintf(errstr, 
-							"Error 5-2: Page %d, state %d (RO), pend[%d] = %d (0).\n",
-							faultpage, page[faultpage].state,
-							jia_pid, page[faultpage].pend[jia_pid]);
-					assert((0 == 1), errstr);
-				}
-#endif
-
-				if (page[faultpage].pend[jia_pid] == 0) {
-					page[faultpage].pend[jia_pid]++;
-					insert(faultpage);
-				}
-				else printf("Logic bug: Page %d already pended %d\n", faultpage,
-						page[faultpage].pend[jia_pid]);
-			}
-		}
-		page[faultpage].state = RW;
-
-		enable_sigio();
-
-#ifdef DOSTAT
-		jiastat.segvLtime += get_usecs() - begin;
-		jiastat.kernelflag = 0;
-#endif
-
-	}
-	else {   /* not local Page Fault */
-		enable_sigio();
-
-#ifdef DOSTAT
-		jiastat.segvRcnt++;
-#endif
-
-		/* Find if page is cached */
-		cachei = (int)page[((unsigned long)faultaddr - Startaddr)
-			/ Pagesize].cachei;
-		if (cachei < Cachepages) {   /* Found in cache */
-			memprotect((caddr_t)faultaddr, Pagesize, PROT_READ | PROT_WRITE);
-
-			if (!((writefault) && (cache[cachei].state == RO))) {
-				/* If it is a writefault and cache copy is read-only */
-				/* we should not ask the protocol to use the cache space */
-				mapped = 1;
-
-#ifdef DOSTAT
-				if (writefault) rw1++; else rr1++;
-#endif
-#ifdef JT
-				x3 = 1;
-#endif
-				getpage(faultaddr, 1);
-			}
-			else {
-
-#ifdef DOSTAT
-				if (writefault) rw2++; else rr2++;
-#endif
-				tempcopy = 0;
-			}
-		}
-		else {
-			if (page[faultpage].state == UNMAP)
-				mapped = 0;
-			else {
-				mapped = 1;
-			}
-			if (mapped == 0) {
-
-				memmap(faultaddr, Pagesize, PROT_READ | PROT_WRITE,
-						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
-			}
-			else
-				memprotect((caddr_t)faultaddr, (size_t)Pagesize,
-						PROT_READ | PROT_WRITE);
-			mapped = 1;
-
-			disable_sigio();
-
-			temp = page[faultpage].oldhome;
-			if (!(page[faultpage].state == RO && temp == jia_pid)) {
-
-#ifdef DOSTAT
-				if (writefault) rw3++; else rr3++; 
-#endif
-				enable_sigio();
-
-#ifdef JT
-				x3 = 1;
-#endif
-				getpage(faultaddr, 1);
-			}
-			else {
-				disable_sigio();
-				page[faultpage].pend[jia_pid] = 1;
-				insert(faultpage);
-				enable_sigio();
-
-#ifdef MHPDEBUG
-				if (!(page[faultpage].pend[jia_pid] == 1 &&
-							page[faultpage].oldhome == jia_pid && writefault))
-				{
-					sprintf(errstr, 
-							"Error: page[%d].pend[%d] = %d, oldhome %d (%d), wf %d.\n",
-							faultpage, jia_pid, 
-							page[faultpage].pend[jia_pid],
-							page[faultpage].oldhome, jia_pid, writefault);
-					assert((0 == 1), errstr);
-				}
-#endif
-
-#ifdef DOSTAT
-				if (writefault) rw4++; else rr4++;
-#endif
-				enable_sigio();
-			}
-			cachei = findposition(faultaddr);
-		}
-
-		if (writefault) {
-			cache[cachei].addr = faultaddr;
-			cache[cachei].state = RW;
-			while(getpwait);    /* wait page to come */
-
-			if (homehost(faultaddr) == jia_pid) {
-				cache[cachei].addr = 0;   /* page become home, no need to cache */
-				disable_sigio();
-				if (cache[cachei].wtnt == 1) {
-					cache[cachei].wtnt = 0;
-					dislink3(cachei);
-				}
-				enable_sigio();
-
-				cache[cachei].state = UNMAP;
-				page[faultpage].cachei = Cachepages;
-				page[faultpage].state = RW;
-
-				disable_sigio();
-				if (page[faultpage].wtnt == 0) {
-					page[faultpage].wtnt = 1;
-					insert2(faultpage);
-				}
-				enable_sigio();
-				flaggy = 0;
-			}
-			else {
-				disable_sigio();
-				if (cache[cachei].wtnt == 0) {
-					cache[cachei].wtnt = 1;
-					insert3(cachei);
-				}
-				enable_sigio();
-				flaggy = 1;
-			}
-			/* create twin */
-			if (homehost(faultaddr) != jia_pid)
-				cache[cachei].twin = newtwin();
-			/* bring page content from temp buffer */
-			if (tempcopy == 1)
-				memcpy(faultaddr, temppage, Pagesize);
-			/* duplicate the twin */
-			if (homehost(faultaddr) != jia_pid)
-				memcpy(cache[cachei].twin, faultaddr, Pagesize);
-		} 
-		else {   /* a read fault */
-			cache[cachei].addr = faultaddr;
-			cache[cachei].state = RO;
-			/* wait for page to come */
-			while(getpwait);
-			if (homehost(faultaddr) == jia_pid) {
-				cache[cachei].addr = 0;
-
-				disable_sigio();
-				if (cache[cachei].wtnt == 1) {
-					cache[cachei].wtnt = 0;
-					dislink3(cachei);
-				}
-				enable_sigio();
-
-				cache[cachei].state = UNMAP;
-				page[faultpage].cachei = Cachepages;
-				page[faultpage].state = RO;
-				flaggy = 0;
-			}
-			else {
-				disable_sigio();
-				if (cache[cachei].wtnt == 0) {
-					cache[cachei].wtnt = 1;
-					insert3(cachei);
-				}
-				enable_sigio();
-				flaggy = 1;
-			}
-			if (tempcopy == 1)
-				memcpy(faultaddr, temppage, Pagesize);
-			memprotect((caddr_t)faultaddr, (size_t)Pagesize, PROT_READ);
-			if (flaggy == 1) page[faultpage].state = MAP; 
-		}
-
-#ifdef DOSTAT
-		jiastat.segvRtime += get_usecs() - begin;
-		jiastat.kernelflag = 0;
-#endif
-	}
-
-#ifdef JT
-	x2 = get_usecs();
-	t[64 + x3] += (x2 - x1);
-	if (x2 - x1 > b[64 + x3]) b[64 + x3] = x2 - x1;
-	if (x2 - x1 < s[64 + x3]) s[64 + x3] = x2 - x1;
-	c[64 + x3]++;
-#endif
-
-	sigprocmask(SIG_SETMASK, &oldset, NULL);
+	notype.c[0] = str[0];
+	notype.c[1] = str[1];
+	notype.c[2] = str[2];
+	notype.c[3] = str[3];
+	return(notype.l);
 }
+
+/* string to short int */
+unsigned long s2s(unsigned char *str)
+{
+	union {
+		unsigned short int s;
+		unsigned char c[Shortbytes];
+	} notype;
+
+	notype.c[0] = str[0];
+	notype.c[1] = str[1];
+	return(notype.s);
+}
+
+
 
 void getpserver(jia_msg_t *req)
 {
@@ -874,7 +909,7 @@ void getpserver(jia_msg_t *req)
 			"Incorrect GETP Message!");
 #endif
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 
 	paddr = (address_t)stol(req->data);
 	writeflag = (int)s2l(req->data + Intbytes);
@@ -968,15 +1003,13 @@ void getpserver(jia_msg_t *req)
 	}
 
 #ifdef DOSTAT
-	if (writeflag)
-	{
+	if (writeflag) {
 		if (grant == Maxhosts)
 			homegrantcnt++;
+		else if (grant > 0)
+			pagegrantcnt++;   /* STAT */
 		else
-			if (grant > 0)
-				pagegrantcnt++;   /* STAT */
-			else
-				refusecnt++;
+			refusecnt++;
 	}
 #endif
 
@@ -1019,7 +1052,7 @@ void getpgrantserver(jia_msg_t *rep)
 	assert((rep->op == GETPGRANT), "Incorrect returned message!");
 #endif
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	datai = 0;
 	addr = (address_t)stol(rep->data + datai);
 
@@ -1035,9 +1068,9 @@ void getpgrantserver(jia_msg_t *rep)
 			if (page[pagei].pend[jia_pid] == 0) {
 				page[pagei].pend[jia_pid]++;
 				insert(pagei);
+			} else {
+				printf("Flaw: Page %d already pended\n", pagei);
 			}
-			else printf("Flaw: Page %d already pended\n", pagei);
-
 			if (page[pagei].wtnt == 0) {
 				page[pagei].wtnt = 1;
 				insert2(pagei);
@@ -1045,8 +1078,7 @@ void getpgrantserver(jia_msg_t *rep)
 
 			page[pagei].rdnt = 1;
 			page[pagei].state = RO;
-		}
-		else {   /* Not being granted the home */
+		} else {   /* Not being granted the home */
 			page[pagei].homepid = grant;
 		}
 
@@ -1070,8 +1102,7 @@ void getpgrantserver(jia_msg_t *rep)
 		}
 		enable_sigio();
 		getpwait = 0;
-	}
-	else {   /* being refused to get page */
+	} else {   /* being refused to get page */
 		page[pagei].homepid = grant + Maxhosts;
 		enable_sigio();
 		getpage(addr, 1);   /* get page from new home again */
@@ -1084,34 +1115,6 @@ void getpgrantserver(jia_msg_t *rep)
 	if (x2 - x1 < s[40]) s[40] = x2 - x1;
 	c[40]++;
 #endif
-}
-
-/* we may do this inline for faster access */
-unsigned long s2l(unsigned char *str)
-{
-	union {
-		unsigned long l;
-		unsigned char c[Intbytes];
-	} notype;
-
-	notype.c[0] = str[0];
-	notype.c[1] = str[1];
-	notype.c[2] = str[2];
-	notype.c[3] = str[3];
-	return(notype.l);
-}
-
-/* string to short int */
-unsigned long s2s(unsigned char *str)
-{
-	union {
-		unsigned short int s;
-		unsigned char c[Shortbytes];
-	} notype;
-
-	notype.c[0] = str[0];
-	notype.c[1] = str[1];
-	return(notype.s);
 }
 
 void diffserver(jia_msg_t *req)
@@ -1138,7 +1141,7 @@ void diffserver(jia_msg_t *req)
 	begin = get_usecs();
 #endif
 
-	disable_sigio();   /* don't disturb */
+	disable_sigio_sigalrm();   /* don't disturb */
 
 #ifdef MHPDEBUG
 	assert((req->op == DIFF) && (req->topid == jia_pid),
@@ -1185,7 +1188,7 @@ void diffserver(jia_msg_t *req)
 
 						if (page[i].pend[j] == 1) {
 							k[j/16] += (1 << (j % 16));
-							disable_sigio();
+							disable_sigio_sigalrm();
 							page[i].pend[j] = 0;
 							if (j == jia_pid) {
 								dislink(i);
@@ -1477,34 +1480,6 @@ void savehomechange()   /* New Function */
 #endif
 }
 
-void senddiffs()
-{
-	int hosti;
-
-#ifdef JT
-	register unsigned int x1, x2;
-	x1 = get_usecs();
-#endif
-
-	for (hosti = 0; hosti < hostc; hosti++) {
-		if (diffmsg[hosti] != DIFFNULL) {
-			if (diffmsg[hosti]->size > 0) {
-				diffwait++;
-				asendmsg(diffmsg[hosti]);
-			}
-			freemsg(diffmsg[hosti]);
-			diffmsg[hosti] = DIFFNULL;
-		}
-	}
-
-#ifdef JT
-	x2 = get_usecs();
-	t[63] += (x2 - x1);
-	if (x2 - x1 > b[63]) b[63] = x2 - x1;
-	if (x2 - x1 < s[63]) s[63] = x2 - x1;
-	c[63]++;
-#endif
-}
 
 void diffgrantserver(jia_msg_t *rep)
 {

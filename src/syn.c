@@ -80,7 +80,7 @@ extern short int head, head2, head3, tail, tail2, tail3;
 extern short int pendprev[Maxmempages], pendnext[Maxmempages];
 extern short int pendprev2[Maxmempages], pendnext2[Maxmempages];
 extern short int pendprev3[Cachepages], pendnext3[Cachepages];
-extern void disable_sigio();
+extern void disable_sigio_sigalrm();
 extern void enable_sigio();
 extern void appendmsg(jia_msg_t *msg, const void *str, int len);
 extern void senddiffs();
@@ -361,7 +361,7 @@ void jia_unlock(int lock)
 
 	assert((lock == top.lockid), "lock and unlock should be used in pair!");
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	if (leftout != -1) {
 		if (stackptr >= 0) {
 			locallock = top.lockid;  
@@ -463,7 +463,7 @@ void jia_barrier()
 		jia_unlock(tempstack[i]);
 	}
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	if (leftout != -1) {
 		if (stackptr >= 0) {
 			locallock = top.lockid;  
@@ -597,7 +597,7 @@ void savecontext(int synop)
 	cachei = head3;
 	counta = 0;
 	count = 0;
-	disable_sigio();
+	disable_sigio_sigalrm();
 	while(cachei != -1) {
 		if (cache[cachei].state != RO)
 			tmp3a[counta++] = cachei;
@@ -798,7 +798,7 @@ void savecontext(int synop)
 #endif
 
 	pagei = head2;
-	disable_sigio();
+	disable_sigio_sigalrm();
 	locallock = top.lockid;
 	readwtnt(locks[locallock].wtntp, 1);
 	while(pagei != -1) {
@@ -873,7 +873,7 @@ void savecontext(int synop)
 	magicflag = 0;
 	enable_sigio();
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	pagei = head;
 	while (pagei != -1) {
 		tmp = pendnext[pagei];
@@ -926,7 +926,7 @@ void pushstack(int lock)
 	x1 = get_usecs();
 #endif
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	if (leftout != -1 && leftout != lock) {
 		if (stackptr >= 0) {
 			locallock = top.lockid;  
@@ -975,7 +975,7 @@ void popstack(int lock)
 	assert((stackptr >= -1),"More unlocks than locks!");
 
 	leftout = lockstack[stackptr + 1].lockid;
-	disable_sigio();
+	disable_sigio_sigalrm();
 	if (locknext[lock] != -1) {
 		if (leftout != -1) {
 			if (stackptr >= 0) {
@@ -1024,7 +1024,7 @@ void acquire(int lock)
 	x1 = get_usecs();
 #endif
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	if (lockstatus[lock] == 1)
 		printf("Possible error -- own lock not released\n");
 	else
@@ -1380,7 +1380,7 @@ void acqfwdserver(jia_msg_t *req)
 		locknext[lock] = proc;
 	}
 	else {
-		disable_sigio();
+		disable_sigio_sigalrm();
 		if (leftout != -1) {
 			if (stackptr >= 0) {
 				locallock = top.lockid;  
@@ -1567,11 +1567,8 @@ void waitserver(jia_msg_t *req)
 	jia_msg_t *grant;
 	int i;
 
-#ifdef MHPDEBUG
 	assert((req->op == WAIT) && (req->topid == jia_pid),
 			"Incorrect WAIT Message!");
-#endif
-
 	waitcounter++;
 
 	if (waitcounter == hostc) {
@@ -1616,7 +1613,7 @@ void recordwtnts(jia_msg_t *req)
 		}
 	}
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	readwtnt(locks[lock].wtntp, 4);
 	for (datai = index; datai < req->size; datai += Intbytes)
 		savewtnt(locks[lock].wtntp, (int)stol(req->data + datai),
@@ -1696,7 +1693,7 @@ void invalidate(jia_msg_t *req)
 		}
 	}
 
-	disable_sigio();
+	disable_sigio_sigalrm();
 	readwtnt(locks[lock].wtntp, 5);
 
 	for (datai = index; datai < req->size; datai += Intbytes) {
@@ -1854,11 +1851,8 @@ void acqgrantserver(jia_msg_t *req)
 
 void waitgrantserver(jia_msg_t *req)
 {
-#ifdef MHPDEBUG
 	assert((req->op == WAITGRANT) && (req->topid == jia_pid),
 			"Incorrect WAITGRANT Message!");
-#endif
-
 	waitwait = 0;
 }
 

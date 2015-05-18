@@ -64,6 +64,9 @@
 #include "comm.h"
 #include "mem.h"
 
+
+int oldsigiomask;
+
 /**
  * BEGINCS begins a critical section by disabling SIGIO and SIGALRM signals.
  */
@@ -120,40 +123,30 @@ unsigned int interruptflag = 0;
 unsigned int intbegin;
 #endif
 
+void acqfwdserver(jia_msg_t *req);
 unsigned long reqports[Maxhosts][Maxhosts], repports[Maxhosts][Maxhosts];
 CommManager commreq, commrep;
-unsigned long timeout_time;
 static struct timeval polltime = { 0, 0 };
 jia_msg_t inqueue[Maxqueue], outqueue[Maxqueue];
 volatile int inhead, intail, incount;
 volatile int outhead, outtail, outcount;
-long Startport;
 
-char errmsg[80] = {'\0'};
-
-void initcomm();
-
-void sigio_handler();
-
-void sigint_handler();
-void asendmsg(jia_msg_t *);
-void ssendmsg(jia_msg_t *, jia_msg_t *);
-void msgserver();
-void outsend();
+long Startport; /*< First port used for communication */ 
 
 extern void assert(int, char *);
 extern void assert0(int, char *);
 extern unsigned long jia_current_time();
-extern void disable_sigio();
+extern void disable_sigio_sigalrm();
 extern void enable_sigio();
 
 extern sigset_t oldset;
-int oldsigiomask;
 
 /**
- * Open socket the for exchanging pages
+ * Open socket for exchanging pages
+ *
+ * @param port Port for communication. 0 to choose a random port.
  */
-int req_fdcreate(int i, int flag)
+int req_fdcreate(unsigned long port)
 {   
 	int fd, res, size;
 	struct sockaddr_in addr;
@@ -173,15 +166,19 @@ int req_fdcreate(int i, int flag)
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = (flag) ? htons(0) : htons(reqports[jia_pid][i]);
+	addr.sin_port = htons(port);
 
 	res = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
 	assert0((res == 0), "req_fdcreate()-->bind()");
 	return fd;
 }
 
-/*------------------------------------------------------------*/
-int rep_fdcreate(int i, int flag)  /* acknowledgement sockets */
+/**
+ * Open socket for exchanging acknowledgements
+ *
+ * @param port Port for communication. 0 to choose a random port.
+ */
+int rep_fdcreate(unsigned long port)
 {
 	int fd, res;
 	struct sockaddr_in addr;
@@ -192,111 +189,17 @@ int rep_fdcreate(int i, int flag)  /* acknowledgement sockets */
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = (flag) ? htons(0) : htons(repports[jia_pid][i]);
+	addr.sin_port = htons(port);
 
 	res=bind(fd, (struct sockaddr *)&addr, sizeof(addr));
 	assert0((res == 0), "rep_fdcreate()-->bind()");
 	return fd;
 }
 
-/*------------------------------------------------------------*/
-void initcomm()
-{
-	int i, j, fd;
-	struct sigaction act;
-
-	msgcnt = 0;	
-	for (i = 0; i < Maxmsgs; i++) {
-		msgbusy[i] = 0;
-		msgarray[i].index = i;
-	}
-
-	inhead = 0;
-	intail = 0;
-	incount = 0;
-	outhead = 0;
-	outtail = 0;
-	outcount = 0;
-
-	/* set up SIGIO and SIGINT handlers */
-	act.sa_handler = (void_func_handler)sigio_handler;
-	sigemptyset(&act.sa_mask);
-	sigaddset(&act.sa_mask, SIGALRM);
-	act.sa_flags = SA_RESTART;   /* Must be here for Linux 2.2 */
-
-	if (sigaction(SIGIO, &act, NULL))
-		assert0(0, "initcomm()-->sigaction()");
-
-	act.sa_handler = (void_func_handler)sigint_handler;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_NODEFER;
-	if (sigaction(SIGINT, &act, NULL)) {
-		assert0(0, "segv sigaction problem");  
-	}
-
-	/***********Initialize comm ports********************/
-
-	for (i = 0; i < Maxhosts; i++)
-		for (j = 0; j < Maxhosts; j++) {
-			reqports[i][j] = Startport + i * Maxhosts + j;
-			repports[i][j] = Startport + Maxhosts * Maxhosts + i * Maxhosts + j;
-		}
-
-	/***********Initialize commreq ********************/
-
-	commreq.rcv_maxfd = 0;
-	commreq.snd_maxfd = 0; 
-	FD_ZERO(&(commreq.snd_set));
-	FD_ZERO(&(commreq.rcv_set));
-	for (i = 0; i < Maxhosts; i++) { 
-		fd = req_fdcreate(i, 0);
-		commreq.rcv_fds[i] = fd;
-		FD_SET(fd, &commreq.rcv_set);
-		commreq.rcv_maxfd = MAX(fd+1, commreq.rcv_maxfd);
-
-		if (0 > fcntl(commreq.rcv_fds[i], F_SETOWN, getpid()))
-			assert0(0, "initcomm()-->fcntl(..F_SETOWN..)");
-
-		if (0 > fcntl(commreq.rcv_fds[i], F_SETFL, FASYNC))
-			assert0(0, "initcomm()-->fcntl(..F_SETFL..)");
-
-		fd = req_fdcreate(i,1);
-		commreq.snd_fds[i] = fd;
-		FD_SET(fd, &commreq.snd_set);
-		commreq.snd_maxfd = MAX(fd+1, commreq.snd_maxfd);
-	}
-	for (i = 0; i < Maxhosts; i++) {
-		commreq.snd_seq[i] = 0;
-		commreq.rcv_seq[i] = 0;
-	}
-
-	/***********Initialize commrep ********************/
-
-	commrep.rcv_maxfd = 0;
-	commrep.snd_maxfd = 0; 
-	FD_ZERO(&(commrep.snd_set));
-	FD_ZERO(&(commrep.rcv_set));
-
-	for(i = 0; i < Maxhosts; i++) { 
-		fd = rep_fdcreate(i,0);
-		commrep.rcv_fds[i] = fd;
-		FD_SET(fd, &(commrep.rcv_set));
-		commrep.rcv_maxfd = MAX(fd+1, commrep.rcv_maxfd);
-
-		fd= rep_fdcreate(i,1);
-		commrep.snd_fds[i] = fd;
-		FD_SET(fd, &commrep.snd_set);
-		commrep.snd_maxfd = MAX(fd+1, commrep.snd_maxfd);
-	}
-}
-
-
-void acqfwdserver(jia_msg_t *req);
 
 /*----------------------------------------------------------*/
 void msgserver()
 {
-
 	switch (inqh.op) {
 		case REL:       relserver(&inqh);       break;
 		case JIAEXIT:   jiaexitserver(&inqh);   break;
@@ -323,13 +226,7 @@ void msgserver()
 	}
 }
 
-/*----------------------------------------------------------*/
-void sigint_handler()    /* Invoked by user pressing Ctrl-C */
-{
-	assert(0,"Exit by user!!\n");
-}
 
-/*----------------------------------------------------------*/
 void sigio_handler()
 {
 	int res;
@@ -368,7 +265,7 @@ void sigio_handler()
 	sigaddset(&set, SIGALRM);
 	sigprocmask(SIG_BLOCK, &set, &oldset);  /* save prev status to oldset */
 
-	disable_sigio();   /* Must be added for Linux 2.2 */
+	disable_sigio_sigalrm();   /* Must be added for Linux 2.2 */
 
 	servemsg=0;
 	readfds = commreq.rcv_set;	
@@ -379,44 +276,42 @@ void sigio_handler()
 
 	while (res > 0) {
 		for (i = 0; i < hostc; i++) 
-			if (i != jia_pid) 
-				if (FD_ISSET(commreq.rcv_fds[i], &readfds)) {
-					assert0((incount < Maxqueue), 
-							"sigio_handler(): Inqueue exceeded!");
+			if ((i != jia_pid) && (FD_ISSET(commreq.rcv_fds[i], &readfds))) {
+				assert0((incount < Maxqueue), 
+						"sigio_handler(): Inqueue exceeded!");
 
-					s = sizeof(from);
-					res = recvfrom(commreq.rcv_fds[i], (char *)&(inqt),
-							Maxmsgsize + Msgheadsize, 0, (struct sockaddr *)&from,
-							&s);
-					assert0((res >= 0), "sigio_handler()-->recvfrom()");
-					to.sin_family = AF_INET;
-					memcpy(&to.sin_addr, hosts[inqt.frompid].addr, 
-							hosts[inqt.frompid].addrlen);
-					to.sin_port = htons(repports[inqt.frompid][inqt.topid]);
-					res = sendto(commrep.snd_fds[i], (char *)&(inqt.seqno),
-							sizeof(inqt.seqno), 0, (struct sockaddr *)&to, sizeof(to));
-					assert0((res != -1), "sigio_handler()-->sendto() ACK");
-					if (inqt.seqno > ((signed) commreq.rcv_seq[i])) {
+				s = sizeof(from);
+				res = recvfrom(commreq.rcv_fds[i], (char *)&(inqt),
+						Maxmsgsize + Msgheadsize, 0, (struct sockaddr *)&from,
+						&s);
+				assert0((res >= 0), "sigio_handler()-->recvfrom()");
+				to.sin_family = AF_INET;
+				memcpy(&to.sin_addr, hosts[inqt.frompid].addr, 
+						hosts[inqt.frompid].addrlen);
+				to.sin_port = htons(repports[inqt.frompid][inqt.topid]);
+				res = sendto(commrep.snd_fds[i], (char *)&(inqt.seqno),
+						sizeof(inqt.seqno), 0, (struct sockaddr *)&to, sizeof(to));
+				assert0((res != -1), "sigio_handler()-->sendto() ACK");
+				if (inqt.seqno > ((signed) commreq.rcv_seq[i])) {
 
 #ifdef DOSTAT
-						if (inqt.frompid != inqt.topid) {
-							jiastat.msgrcvcnt++;
-							jiastat.msgrcvbytes+=(inqt.size+Msgheadsize);
-						}
+					if (inqt.frompid != inqt.topid) {
+						jiastat.msgrcvcnt++;
+						jiastat.msgrcvbytes+=(inqt.size+Msgheadsize);
+					}
 #endif
-						commreq.rcv_seq[i] = inqt.seqno;
-						debugmsg(&inqt, 1);
-						BEGINCS;
-						intail = (intail + 1) % Maxqueue;
-						incount++;
-						if (incount == 1) servemsg = 1;
-						ENDCS;
-					}
-					else {
-						debugmsg(&inqt, 1);
-						printf("Receive resend message!\n");
-					}
+					commreq.rcv_seq[i] = inqt.seqno;
+					debugmsg(&inqt, 1);
+					BEGINCS;
+					intail = (intail + 1) % Maxqueue;
+					incount++;
+					if (incount == 1) servemsg = 1;
+					ENDCS;
+				} else {
+					debugmsg(&inqt, 1);
+					printf("Receive resend message!\n");
 				}
+			}
 		readfds = commreq.rcv_set;	
 		polltime.tv_sec = 0;
 		polltime.tv_usec = 0;
@@ -447,49 +342,112 @@ void sigio_handler()
 		} else if (jiastat.kernelflag == 1) {
 			jiastat.synsigiotime += get_usecs() - begin;
 		} else if (jiastat.kernelflag == 2) {
-			jiastat.segvsigiotime += get_usecs()-begin;
+			jiastat.segvsigiotime += get_usecs() - begin;
 		}
-	} 
-	else intbegin = get_usecs();
+	} else {
+		intbegin = get_usecs();
+	}
 #endif /* DOSTAT */
 
 	sigprocmask(SIG_SETMASK, &oldset, NULL);   /* restore original status */
 }
 
-/*----------------------------------------------------------*/
-void asendmsg(jia_msg_t *msg)
+
+void sigint_handler()    /* Invoked by user pressing Ctrl-C */
 {
-	int outsendmsg;
+	assert(0,"Exit by user!!\n");
+}
 
-#ifdef DOSTAT
-	register unsigned int begin = get_usecs();
-#endif
 
-	BEGINCS;
-	assert0((outcount < Maxqueue), "asendmsg(): Outqueue exceeded!");
-	msg->syn=0;
-	memcpy(&(outqt), msg, Msgheadsize + msg->size);
-	commreq.snd_seq[msg->topid]++;
-	outqt.seqno = commreq.snd_seq[msg->topid];
-	outcount++;
-	outtail = (outtail + 1) % Maxqueue;
-	outsendmsg = (outcount == 1) ? 1 : 0;
-	ENDCS;
+void initcomm()
+{
+	int i, j, fd;
+	struct sigaction act;
 
-	while(outsendmsg == 1) {
-		outsend();
-		BEGINCS;
-		outhead = (outhead + 1) % Maxqueue;
-		outcount--;
-		outsendmsg = (outcount > 0) ? 1 : 0;
-		ENDCS;
+	msgcnt = 0;	
+	for (i = 0; i < Maxmsgs; i++) {
+		msgbusy[i] = 0;
+		msgarray[i].index = i;
 	}
 
-#ifdef DOSTAT 
-	jiastat.commtime += get_usecs() - begin;
-	jiastat.asendtime += get_usecs() - begin;
-#endif
+	inhead = 0;
+	intail = 0;
+	incount = 0;
+	outhead = 0;
+	outtail = 0;
+	outcount = 0;
+
+	/* Set up SIGIO handler: */
+	act.sa_handler = (void_func_handler)sigio_handler;
+	sigemptyset(&act.sa_mask);
+	sigaddset(&act.sa_mask, SIGALRM);
+	act.sa_flags = SA_RESTART;   /* Must be here for Linux 2.2 */
+	if (sigaction(SIGIO, &act, NULL))
+		assert0(0, "initcomm(): SIGIO problem");
+
+	/* Set up SIGINT handler: */
+	act.sa_handler = (void_func_handler)sigint_handler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_NODEFER;
+	if (sigaction(SIGINT, &act, NULL))
+		assert0(0, "initcomm(): SIGINT problem");
+
+	/***********Initialize comm ports********************/
+
+	for (i = 0; i < Maxhosts; i++)
+		for (j = 0; j < Maxhosts; j++) {
+			reqports[i][j] = Startport + i * Maxhosts + j;
+			repports[i][j] = Startport + Maxhosts * Maxhosts + i * Maxhosts + j;
+		}
+
+	/***********Initialize commreq ********************/
+
+	commreq.rcv_maxfd = 0;
+	commreq.snd_maxfd = 0; 
+	FD_ZERO(&(commreq.snd_set));
+	FD_ZERO(&(commreq.rcv_set));
+	for (i = 0; i < Maxhosts; i++) { 
+		fd = req_fdcreate(i);
+		commreq.rcv_fds[i] = fd;
+		FD_SET(fd, &commreq.rcv_set);
+		commreq.rcv_maxfd = MAX(fd+1, commreq.rcv_maxfd);
+
+		if (0 > fcntl(commreq.rcv_fds[i], F_SETOWN, getpid()))
+			assert0(0, "initcomm()-->fcntl(..F_SETOWN..)");
+
+		if (0 > fcntl(commreq.rcv_fds[i], F_SETFL, FASYNC))
+			assert0(0, "initcomm()-->fcntl(..F_SETFL..)");
+
+		fd = req_fdcreate(0);
+		commreq.snd_fds[i] = fd;
+		FD_SET(fd, &commreq.snd_set);
+		commreq.snd_maxfd = MAX(fd+1, commreq.snd_maxfd);
+	}
+	for (i = 0; i < Maxhosts; i++) {
+		commreq.snd_seq[i] = 0;
+		commreq.rcv_seq[i] = 0;
+	}
+
+	/***********Initialize commrep ********************/
+
+	commrep.rcv_maxfd = 0;
+	commrep.snd_maxfd = 0; 
+	FD_ZERO(&(commrep.snd_set));
+	FD_ZERO(&(commrep.rcv_set));
+
+	for(i = 0; i < Maxhosts; i++) { 
+		fd = rep_fdcreate(i);
+		commrep.rcv_fds[i] = fd;
+		FD_SET(fd, &(commrep.rcv_set));
+		commrep.rcv_maxfd = MAX(fd+1, commrep.rcv_maxfd);
+
+		fd= rep_fdcreate(0);
+		commrep.snd_fds[i] = fd;
+		FD_SET(fd, &commrep.snd_set);
+		commrep.snd_maxfd = MAX(fd+1, commrep.snd_maxfd);
+	}
 }
+
 
 void outsend()
 {
@@ -529,15 +487,16 @@ void outsend()
 			servemsg = (incount > 0) ? 1 : 0;
 			ENDCS;
 		}
-	}
-	else {
+	} else {
 		msgsize = outqh.size + Msgheadsize;
 
 #ifdef DOSTAT
 		jiastat.msgsndcnt++;
 		jiastat.msgsndbytes += msgsize;
-		if (outqh.op == GETP) jiastat.getpcnt++;
-		else if (outqh.op == DIFF) jiastat.diffcnt++;
+		if (outqh.op == GETP)
+			jiastat.getpcnt++;
+		else if (outqh.op == DIFF)
+			jiastat.diffcnt++;
 #endif
 
 		to.sin_family = AF_INET;
@@ -579,24 +538,22 @@ void outsend()
 			}
 
 			if (arrived == 1) {
+				do { 
+					BEGINCS;
+					s= sizeof(from);
+					res = recvfrom(commrep.rcv_fds[toproc], (char *)&rep, Intbytes,0,
+							(struct sockaddr *)&from, &s);
+					ENDCS;
+				} while ((res < 0) && (errno == EINTR));
 
-recv_again:
-				BEGINCS;
-				s= sizeof(from);
-				res = recvfrom(commrep.rcv_fds[toproc], (char *)&rep, Intbytes,0,
-						(struct sockaddr *)&from, &s);
-				ENDCS;
-				if ((res < 0) && (errno == EINTR))
-				{   printf("Hang up? when recv from %d, res = %d\n", toproc, res);
-					goto recv_again;
-				}
-				if ((res != -1) && (rep == outqh.seqno)) sendsuccess=1;
-				else printf("send problem: res = %d, rep = %d\n", res, rep);
+				if ((res != -1) && (rep == outqh.seqno))
+					sendsuccess=1;
+				else
+					printf("send problem: res = %d, rep = %d\n", res, rep);
+				break;
 			}
 
-			if (sendsuccess == 1) {
-			}
-			else
+			if (sendsuccess != 1)
 				retries_num++;
 		}
 
@@ -610,5 +567,40 @@ recv_again:
 		}
 	}
 } 
-/*-------------------------------------------*/
+
+
+void asendmsg(jia_msg_t *msg)
+{
+	int outsendmsg;
+
+#ifdef DOSTAT
+	register unsigned int begin = get_usecs();
+#endif
+
+	BEGINCS;
+	assert0((outcount < Maxqueue), "asendmsg(): Outqueue exceeded!");
+	msg->syn=0;
+	memcpy(&(outqt), msg, Msgheadsize + msg->size);
+	commreq.snd_seq[msg->topid]++;
+	outqt.seqno = commreq.snd_seq[msg->topid];
+	outcount++;
+	outtail = (outtail + 1) % Maxqueue;
+	outsendmsg = (outcount == 1) ? 1 : 0;
+	ENDCS;
+
+	while(outsendmsg == 1) {
+		outsend();
+		BEGINCS;
+		outhead = (outhead + 1) % Maxqueue;
+		outcount--;
+		outsendmsg = (outcount > 0) ? 1 : 0;
+		ENDCS;
+	}
+
+#ifdef DOSTAT 
+	jiastat.commtime += get_usecs() - begin;
+	jiastat.asendtime += get_usecs() - begin;
+#endif
+}
+
 #endif /* NULL_LIB */
