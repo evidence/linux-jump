@@ -407,7 +407,7 @@ void initcomm()
 	FD_ZERO(&(commreq.snd_set));
 	FD_ZERO(&(commreq.rcv_set));
 	for (i = 0; i < Maxhosts; i++) { 
-		fd = req_fdcreate(i);
+		fd = req_fdcreate(reqports[jia_pid][i]);
 		commreq.rcv_fds[i] = fd;
 		FD_SET(fd, &commreq.rcv_set);
 		commreq.rcv_maxfd = MAX(fd+1, commreq.rcv_maxfd);
@@ -436,7 +436,7 @@ void initcomm()
 	FD_ZERO(&(commrep.rcv_set));
 
 	for(i = 0; i < Maxhosts; i++) { 
-		fd = rep_fdcreate(i);
+		fd = rep_fdcreate(repports[jia_pid][i]);
 		commrep.rcv_fds[i] = fd;
 		FD_SET(fd, &(commrep.rcv_set));
 		commrep.rcv_maxfd = MAX(fd+1, commrep.rcv_maxfd);
