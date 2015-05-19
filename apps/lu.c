@@ -41,9 +41,10 @@ void seqinita()
 
 		for (i=0; i<N; i++) {
 			for (j=0; j<N; j++) {
-				a[j][i] = ((double) lrand48())/MAXRAND;
 				if (i==j)
 					a[j][i] *= 10.0;
+				else
+					a[j][i] = ((double) lrand48())/MAXRAND;
 				if (CHECK == 1) 
 					old[j][i] = a[j][i];
 			}
@@ -52,7 +53,8 @@ void seqinita()
 }
 
 void lua()
-{register int i,j,k;
+{
+	register int i,j,k;
 	int begin;
 	double temp;
 

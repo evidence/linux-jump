@@ -74,23 +74,26 @@
 #define   homepage(addr) ((unsigned long)(addr)-Startaddr)/Pagesize
 
 #define   memprotect(argx, argy, argz)                               	\
-{ int protyes;                                            	\
+{									\
+	int protyes;                                            	\
 	unsigned long ad;                                       	\
 	protyes=mprotect((caddr_t)(argx),(size_t)(argy),argz);  	\
 	if (protyes != 0) {                                        	\
 		ad=(unsigned long)argx;                               	\
+		printf("mprotect() called from file %s line %d\n",__FILE__, __LINE__); \
 		sprintf(errstr,"mprotect failed! addr=0x%lx,errno=%d",ad,errno); \
 		assert((protyes==0),errstr);                          	\
 	}                                                       	\
 }
 
-#define   memmap(arg1,arg2,arg3,arg4,arg5,arg6)                        	\
-{ caddr_t mapad;						\
-	mapad=mmap((caddr_t)(arg1),(size_t)(arg2),(arg3),(arg4),(arg5),(arg6)); \
-	if (mapad != (caddr_t)(arg1)) {				\
+#define   memmap(arg1,arg2,arg3,arg4,arg5,arg6)							\
+{												\
+	caddr_t mapad;										\
+	mapad=mmap((caddr_t)(arg1),(size_t)(arg2),(arg3),(arg4),(arg5),(arg6));			\
+	if (mapad != (caddr_t)(arg1)) {								\
 		sprintf(errstr,"mmap failed! addr=0x%lx, errno=%d",(unsigned long)(arg1),errno);\
-		assert(0,errstr);						\
-	}                                                           \
+		assert(0,errstr);								\
+	}											\
 }
 
 typedef unsigned char* address_t; 

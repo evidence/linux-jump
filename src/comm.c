@@ -144,7 +144,7 @@ extern sigset_t oldset;
 /**
  * Open socket for exchanging pages
  *
- * @param port Port for communication. 0 to choose a random port.
+ * @param port Port for communication. 0 to get a random port.
  */
 int req_fdcreate(unsigned long port)
 {   
@@ -176,7 +176,7 @@ int req_fdcreate(unsigned long port)
 /**
  * Open socket for exchanging acknowledgements
  *
- * @param port Port for communication. 0 to choose a random port.
+ * @param port Port for communication. 0 to get a random port.
  */
 int rep_fdcreate(unsigned long port)
 {
