@@ -25,8 +25,7 @@ unsigned int do_log2(int x)
 {
 	unsigned int i = 0;
 	int j = 1;
-	while (x >= j * 2)
-	{
+	while (x >= j * 2) {
 		i++;
 		j = j * 2;
 	}
@@ -42,17 +41,24 @@ int main(int argc, char ** argv)
 	struct timeval time1, time2, time3, time4, time5, time6;
 	unsigned int KEY, RANGE, MAGIC, BSIZE, PAGES;
 
-	if (argc >= 2)
-	{
-		if (argv[1][0] == 'a') KEY = 262144;
-		else if (argv[1][0] == 'b') KEY = 524288;
-		else if (argv[1][0] == 'c') KEY = 1048576;
-		else if (argv[1][0] == 'd') KEY = 2097152;
-		else if (argv[1][0] == 'e') KEY = 4194304;
-		else if (argv[1][0] == 'f') KEY = 8388608;
-		else KEY = 4194304;
+	if (argc >= 2) {
+		if (argv[1][0] == 'a')
+			KEY = 262144;
+		else if (argv[1][0] == 'b')
+			KEY = 524288;
+		else if (argv[1][0] == 'c')
+			KEY = 1048576;
+		else if (argv[1][0] == 'd')
+			KEY = 2097152;
+		else if (argv[1][0] == 'e')
+			KEY = 4194304;
+		else if (argv[1][0] == 'f')
+			KEY = 8388608;
+		else
+			KEY = 4194304;
+	} else {
+		KEY = 4194304;
 	}
-	else KEY = 4194304;
 
 	jia_init(argc, argv);
 
@@ -76,13 +82,12 @@ int main(int argc, char ** argv)
 
 	MAGIC = (KEY / jiahosts) * jiapid;
 
-	if (jiapid == 0)
-	{
-		flag[0] = 0; flag[1] = 0;
+	if (jiapid == 0) {
+		flag[0] = 0; 
+		flag[1] = 0;
 	}
 
-	for (i = 0; i < KEY / jiahosts; i++)
-	{
+	for (i = 0; i < KEY / jiahosts; i++) {
 		temp1 = rand() % 1024;
 		temp2 = rand() % 2048;
 		temp3 = rand() % 2048;
@@ -101,14 +106,9 @@ int main(int argc, char ** argv)
 	RANGE = do_pow(32 - do_log2(BUCKETS));
 	printf("range = %d, jiahosts = %d\n", RANGE, jiahosts);
 
-	for (i = 0; i < KEY / jiahosts; i++)
-	{
+	for (i = 0; i < KEY / jiahosts; i++) {
 		j = MAGIC + i;
 		k = (b[j] / RANGE) * jiahosts + jiapid;
-		/*
-		   printf("k at %d\n", k);
-		   printf("A got at %d, B %d\n", k * BSIZE + count[k], j);
-		   */
 		a[k * BSIZE + count[k]] = b[j];
 
 		count[k]++;
@@ -123,64 +123,41 @@ int main(int argc, char ** argv)
 	for (i = 0; i < BUCKETS * 16; i++)
 		count[i] = 0;
 
-	for (i = 0; i < ((unsigned int) (BUCKETS/jiahosts)); i++)
-	{
+	for (i = 0; i < ((unsigned int) (BUCKETS/jiahosts)); i++) {
 		counter = KEY / jiahosts * jiapid;
-		for (j = 0; j < jiahosts; j++)
-		{
+		for (j = 0; j < jiahosts; j++) {
 			k = (jiapid * BUCKETS + i * jiahosts + j) * BSIZE;
 			if (k > 16 * 1048576) printf("ERROR KEY!\n");
-			/* printf("a[%d] = %d, \n", k, a[k]); */
-			while (a[k] > 0)
-			{
+			while (a[k] > 0) {
 				b[counter] = a[k];
 				counter++;
 				k++;
-				/*   printf("a[%d] = %d\n", k, a[k]); */
 			}
 		}
 
 		/* printf("RANGE calculated!\n"); */
 
-		for (j = KEY / jiahosts * jiapid; j < counter; j++)
-		{
+		for (j = KEY / jiahosts * jiapid; j < counter; j++) {
 			k = b[j] / RANGE;
-			/* printf("j = %d, b[j] = %d, k = %d, index = %d\n", 
-			   j, b[j], k, k * BSIZE + count[k]); */
 			a[k * BSIZE + count[k]] = b[j];
 			count[k]++;
 		}
 
-		for (j = 0; j < jiahosts; j++)
-		{
+		for (j = 0; j < jiahosts; j++) {
 			k = jiapid * BUCKETS + i * jiahosts + j;
 
 			MAGIC = k * BSIZE;
 			printf("MAGIC = %d\n", MAGIC);
 
-			/*
-			   if (k == 0)
-			   for (x = 0; x < count[k]; x++)
-			   printf("a[%d] = %d\n", x, a[x]);
-			   */
-
 			for (x = count[k]; x >= 1; x--)
-				for (y = 2; y <= x; y++)
-				{
+				for (y = 2; y <= x; y++) {
 					z = MAGIC + y - 1;
-					if (a[z-1] > a[z])
-					{
+					if (a[z-1] > a[z]) {
 						temp = a[z-1];
 						a[z-1] = a[z];
 						a[z] = temp;
 					}
 				}
-
-			/*
-			   if (k == 0)
-			   for (x = 0; x < count[k]; x++)
-			   printf("a[%d] = %d\n", x, a[x]);
-			   */
 		}
 	}
 
@@ -193,8 +170,8 @@ int main(int argc, char ** argv)
 		counter += count[i];
 
 	jia_lock(0);
-	while (((signed) flag[0]) != jiapid)
-	{  jia_unlock(0);
+	while (((signed) flag[0]) != jiapid) {  
+		jia_unlock(0);
 		for (i = 0; ((signed) i) < rand() * 100; i++);
 		jia_lock(0);
 	}
@@ -206,39 +183,30 @@ int main(int argc, char ** argv)
 	jia_unlock(0);
 
 	x = start;
-	if (x % BSIZE > 0)
-	{
+	if (x % BSIZE > 0) {
 		jia_lock(jiapid);
 		locked = 1;
-	}
-	else
+	} else {
 		locked = 0; 
+	}
 
-	for (i = BUCKETS * jiapid; ((signed) i) < BUCKETS * (jiapid + 1); i++)
-	{
+	for (i = BUCKETS * jiapid; ((signed) i) < BUCKETS * (jiapid + 1); i++) {
 		y = i * BSIZE;
-		for (j = 0; j < ((signed) (count[i])); j++)
-		{
-			if (locked == 1 && x % BSIZE == 0)
-			{
+		for (j = 0; j < ((signed) (count[i])); j++) {
+			if (locked == 1 && x % BSIZE == 0) {
 				jia_unlock(jiapid);
 				locked = 0;
-			}
-			else if ((locked == 0) && (start + counter - x < ((signed) BSIZE)) && (x%BSIZE == 0))
-			{
+			} else if ((locked == 0) && (start + counter - x < ((signed) BSIZE)) && (x%BSIZE == 0)) {
 				jia_lock(jiapid+1);
 				locked = 1;
 			}
-			/*
-			   if (x == 199 || x == 202)
-			   printf("a[%d + %d] = %d\n", y, j, a[y+j]);
-			   */
 			b[x] = a[y + j];
 			x++;
 		}
 	}
 
-	if (locked == 1) jia_unlock(jiapid+1);   
+	if (locked == 1)
+		jia_unlock(jiapid+1);   
 
 	jia_barrier();
 	gettime(&time6);
@@ -250,11 +218,11 @@ int main(int argc, char ** argv)
 				printf("Error in keys %d (%d) and %d (%d)\n", i, b[i], i+1,
 						b[i+1]);
 
-	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
-	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
-	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
-	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
-	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
+	printf("Partial time 1:\t\t %ld sec\n", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld sec\n", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld sec\n", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld sec\n", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld sec\n", time_diff_sec(&time5, &time1));
 	jia_exit();
 
 	return 0;

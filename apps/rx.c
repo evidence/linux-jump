@@ -43,8 +43,7 @@ int main(int argc, char ** argv)
 
 	j = 0;
 
-	for (i = 0; i < MAGIC; i++)
-	{
+	for (i = 0; i < MAGIC; i++) {
 		r_order[0][i] = j + jiapid * MAGIC;
 		j = j + MAGIC / PROCS;
 		if (j >= MAGIC) j = j - MAGIC + 1;
@@ -52,8 +51,7 @@ int main(int argc, char ** argv)
 
 	j = jiapid * MAGIC / PROCS;
 
-	for (i = 0; i < MAGIC; i++)
-	{
+	for (i = 0; i < MAGIC; i++) {
 		r_order[1][i] = j;
 		j = j + MAGIC;
 		if (j >= MAGIC * PROCS) j = j - MAGIC * PROCS + 1;
@@ -61,23 +59,20 @@ int main(int argc, char ** argv)
 
 	j = 0;
 
-	for (i = 0; i < MAGIC; i++)
-	{
+	for (i = 0; i < MAGIC; i++) {
 		o_order[i] = j;
 		j = j + PROCS;
 		if (j >= MAGIC) j = j - MAGIC + 1;
 	}
 
-	for (i = 0; i < MAGIC; i++)
-	{
+	for (i = 0; i < MAGIC; i++) {
 		w_order[0][i] = r_order[0][o_order[i]]; 
 		w_order[1][i] = r_order[1][o_order[i]];
 	}
 
 	srand(jiapid+SEED);
 
-	for (i = 0; i < KEY / jiahosts; i++)
-	{
+	for (i = 0; i < KEY / jiahosts; i++) {
 		temp1 = rand() % 1024;
 		temp2 = rand() % 2048;
 		temp3 = rand() % 2048;
@@ -92,18 +87,14 @@ int main(int argc, char ** argv)
 	jia_barrier();
 	gettime(&time3);
 
-	for (i = 0; i < stage; i++)
-	{
-		if (i > 0)
-		{
+	for (i = 0; i < stage; i++) {
+		if (i > 0) {
 			printf("Radix sort: swapping stage %d \n", i);
 			element = 0;
 
-			for (j = 0; j < MAGIC; j++)
-			{
+			for (j = 0; j < MAGIC; j++) {
 				temp = r_order[i % 2][j] * SLOT;
-				while (a[temp] > 0)
-				{
+				while (a[temp] > 0) {
 					local[element] = a[temp]; 
 					element++;
 					temp++;
@@ -113,21 +104,18 @@ int main(int argc, char ** argv)
 			jia_barrier();
 		}
 
-		if (i < stage)
-		{
+		if (i < stage) {
 			printf("Radix sort: sorting stage %d, %d elements\n", i,
 					element);
 
 			for (j = 0; j < MAGIC; j++)
 				count[j] = 0;
 
-			for (j = 0; j < element; j++)
-			{
+			for (j = 0; j < element; j++) {
 				remainder = (local[j] >> (i * BIT)) % MAGIC;
-				if (count[remainder] == SLOT - 1)
+				if (count[remainder] == SLOT - 1) {
 					jia_error("Number of slots not enough, sorting aborted.\n");
-				else
-				{  
+				} else {  
 					temp = w_order[i % 2][remainder] * SLOT + count[remainder];
 					a[temp] = local[j];
 					count[remainder]++;
@@ -147,15 +135,11 @@ int main(int argc, char ** argv)
 	value = 0;
 	element = 0;
 
-	if (jiapid == 0)
-	{      
-		for (k = 0; k < jiahosts; k++)
-		{
-			for (j = 0; j < MAGIC; j++)
-			{
+	if (jiapid == 0) {      
+		for (k = 0; k < jiahosts; k++) {
+			for (j = 0; j < MAGIC; j++) {
 				temp = (r_order[stage % 2][j] + k * MAGIC) * SLOT;
-				while (a[temp] > 0)
-				{
+				while (a[temp] > 0) {
 					if (value > a[temp])
 						error = 1;
 					value = a[temp];
@@ -167,8 +151,7 @@ int main(int argc, char ** argv)
 
 		if (error == 1)
 			printf("Radix sort: Sorting error!\n");
-		if (element != KEY)
-		{
+		if (element != KEY) {
 			printf("Radix sort: Error number of keys!\n");
 			error = 1;
 		}
@@ -179,11 +162,11 @@ int main(int argc, char ** argv)
 
 	gettime(&time5);
 
-	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
-	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
-	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
-	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
-	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
+	printf("Partial time 1:\t\t %ld sec\n", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld sec\n", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld sec\n", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld sec\n", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld sec\n", time_diff_sec(&time5, &time1));
 
 	jia_exit();
 

@@ -28,24 +28,24 @@ void seqinita()
 	if (jiapid==0) {
 		printf("Begin initialization\n"); 
 
-		if (CHECK==1){
+		if (CHECK==1) {
 			old=(double **)malloc(N*sizeof(double *));
-			for (i=0;i<N;i++){
+			for (i=0;i<N;i++)
 				old[i]=(double *)malloc(N*sizeof(double));
-			}
 			new=(double **)malloc(N*sizeof(long));
-			for (i=0;i<N;i++){
+			for (i=0;i<N;i++)
 				new[i]=(double *)malloc(N*sizeof(double));
-			}
 		}
 
 		srand48(flag);
 
-		for (i=0; i<N; i++){
+		for (i=0; i<N; i++) {
 			for (j=0; j<N; j++) {
 				a[j][i] = ((double) lrand48())/MAXRAND;
-				if (i==j) a[j][i] *= 10.0;
-				if (CHECK==1) old[j][i] = a[j][i];
+				if (i==j)
+					a[j][i] *= 10.0;
+				if (CHECK == 1) 
+					old[j][i] = a[j][i];
 			}
 		}
 	}
@@ -58,69 +58,43 @@ void lua()
 
 	printf("Begin LU factorization\n"); 
 
-	for (j=0;j<N;j++){
-		/*   printf("Step %d:\n", j); */
-		if ((j%jiahosts)==jiapid){
-			/*
-			   printf("%d\t%d\t%d\t%lf\textraz\n", j, j, j, a[j][j]);
-			   */
-			if (fabs(a[j][j])>EPSILON){
+	for (j=0; j<N; j++){
+		if ((j%jiahosts) == jiapid) {
+			if (fabs(a[j][j])>EPSILON) {
 				temp=a[j][j];
-				/*
-				   if (j <= 8)
-				   printf("%d:a[%d][%d]:%lf:z\n",j,j,j,temp);
-				   */
-				for (i=j+1;(i<N);i++){
+				for (i=j+1;(i<N);i++)
 					a[j][i]/=temp;
-					/*
-					   if (i <= 8 && j <= 8)
-					   printf("%d:a[%d][%d]:%lf:z\n",j,j,i,a[j][i]);
-					   */
-				}
-			}else{
+			} else {
 				sprintf(luerr,"Matrix a is singular, a[%d][%d]=%f",j,j,a[j][j]);
 				jia_error(luerr); 
 			}
 		}
 
-		/*   printf("+B "); */
 		jia_barrier();
-		/*   printf("-B "); */
 
-		begin=j+1-(j+1)%jiahosts+jiapid;
-		if (begin<(j+1)) begin+=jiahosts;
-		for (k=begin;k<N;k+=jiahosts){
-			temp=a[k][j];
-			/*
-			   printf("%d\t%d\t%d\t%lf\textra_x\n", j, k, j, temp); 
-			   */
-			for (i=j+1;(i<N);i++){
-				/*
-				   if (i > 123) printf("%d\t%d\t%d\t%lf\textra_y\n", j, k, i,
-				   a[k][i]);
-				   if (a[j][i] > 100 || a[j][i] < -100)
-				   printf("%d\t%d\t%d\t%lf\textra_x\n", j, j, i, a[j][i]); 
-				   */
-				a[k][i]-=(a[j][i]*temp);
-				/*
-				   if (i > 123) printf("%d\t%d\t%d\t%lf\textra_y\n", j, k, i, a[k][i]);
-				   */
-			}
+		begin = j+1-(j+1)%jiahosts + jiapid;
+		if (begin < (j+1))
+			begin += jiahosts;
+		for (k=begin; k<N; k+=jiahosts){
+			temp = a[k][j];
+			for (i=j+1; (i<N); i++)
+				a[k][i] -= (a[j][i]*temp);
 		}
 	}
 }
 
 
 void checka()
-{int i,j,k;
+{
+	int i,j,k;
 	double temp;
 	int correct = 1;
 
-	if ((CHECK==1)&&(jiapid==0)){
+	if ((CHECK==1) && (jiapid==0)){
 		printf("Begin check the result!\n");
 
 		for (i=0;i<N;i++)
-			for (j=0;j<N;j++){
+			for (j=0;j<N;j++) {
 				temp=0.0;
 
 				for (k=0;k<=min(i,j);k++)
@@ -134,12 +108,6 @@ void checka()
 							i,j,old[j][i],i,j,new[j][i]);
 					correct = 0;
 				}
-				/*
-				   else if (j==0){ 
-				   printf("old[%d][%d]=%14.6lf, new[%d][%d]=%14.6lf\n",
-				   i,j,old[j][i],i,j,new[j][i]);
-				   }
-				   */
 			}
 
 		if (correct)
@@ -174,13 +142,11 @@ int main(int argc, char **argv)
 	jia_barrier(); 
 	gettime(&time5);
 
-	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
-	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
-	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
-	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
-	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
-
-
+	printf("Partial time 1:\t\t %ld sec\n", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld sec\n", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld sec\n", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld sec\n", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld sec\n", time_diff_sec(&time5, &time1));
 
 	jia_exit();
 
