@@ -74,7 +74,6 @@ void freemsg(jia_msg_t *msg);
 void appendmsg(jia_msg_t *msg, const void *str, int len);
 void printstack(int ptr);
 unsigned long jia_current_time();
-float jia_clock();
 void jiasleep(unsigned long);
 void disable_sigio_sigalrm();         
 void disable_sigalrm();         
@@ -266,8 +265,6 @@ void debugmsg(jia_msg_t *msg, int right){}
 /* Following programs are used by Shi. 9.10 */
 
 unsigned long start_sec = 0; 
-unsigned long start_time_sec = 0; 
-unsigned long start_time_usec = 0; 
 unsigned long start_msec = 0;  
 
 /*-----------------------------------------------------------*/
@@ -288,18 +285,6 @@ unsigned long jia_current_time()
 }
 
 /*-----------------------------------------------------------*/
-float jia_clock()
-{
-	struct timeval val;
-	gettimeofday(&val, NULL);
-	if (!start_time_sec) {
-		start_time_sec = val.tv_sec;
-		start_time_usec = val.tv_usec;
-	}
-	return (float)(((val.tv_sec * 1000000.0 + val.tv_usec) -
-				(start_time_sec * 1000000.0 - start_time_usec)) / 1000000.0);
-}
-
 
 /**
  * Block the SIGIO and SIGALRM signals.
@@ -364,20 +349,7 @@ void jia_error(char *str, ...)
 #include <sys/time.h>
 
 unsigned long start_sec = 0; 
-unsigned long start_time_sec  = 0; 
-unsigned long start_time_usec  = 0; 
 unsigned long start_msec = 0;  
-float jia_clock()
-{
-	struct timeval val;
-	gettimeofday(&val, NULL);
-	if (!start_time_sec) {
-		start_time_sec = val.tv_sec;
-		start_time_usec = val.tv_usec;
-	}
-	return (float)(((val.tv_sec * 1000000.0 + val.tv_usec) -
-				(start_time_sec * 1000000.0 - start_time_usec)) / 1000000.0);
-}
 
 void jia_error(char *errstr)
 {

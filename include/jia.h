@@ -126,6 +126,4 @@ extern int      jia_lock_index;
 #define	G_MALLOC(x)	jia_alloc(x);
 #define	G2_MALLOC(x,y)	jia_alloc(x);
 
-#define	CLOCK(x)	x = jia_clock();
-
 #endif /* JIA_PUBLIC */

@@ -422,7 +422,6 @@ void jia_init(int argc, char **argv)
 	enable_sigio();
 
 	jia_current_time();
-	jia_clock();
 	if (jia_pid != 0) sleep(1);
 }
 
