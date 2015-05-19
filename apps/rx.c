@@ -10,8 +10,6 @@
 #define MAGIC       16                      /* number of slots */
 #define BIT          4                      /* 2 ^ 4 = 16 */
 #define KEY    2097152                      /* numbers to be sorted */
-#define PROCS        4
-#define SLOT   KEY * 2 / (MAGIC * PROCS)    /* slot size */
 #define SEED         1
 
 unsigned int *a;
@@ -24,17 +22,20 @@ int main(int argc, char ** argv)
 	int i, j, k, element, stage, error;
 	int remainder, temp1, temp2, temp3, temp;
 	struct timeval time1, time2, time3, time4, time5;
+	int slot;	/*< Slot size */
 
 	int r_order[2][16], w_order[2][16];
 	int o_order[16];
 
 	jia_init(argc, argv);
+	printf("Number of hosts: %d\n", jiahosts);
+	slot = KEY * 2 / (MAGIC * jiahosts);
 
 	jia_barrier();
 	gettime(&time1);
 
 	a = (unsigned int *) 
-		jia_alloc(PROCS * MAGIC * SLOT * sizeof(unsigned int));
+		jia_alloc(KEY * 2 * sizeof(unsigned int));
 
 	local = (unsigned int *) malloc(KEY * sizeof(unsigned int));
 
@@ -45,23 +46,23 @@ int main(int argc, char ** argv)
 
 	for (i = 0; i < MAGIC; i++) {
 		r_order[0][i] = j + jiapid * MAGIC;
-		j = j + MAGIC / PROCS;
+		j = j + MAGIC / jiahosts;
 		if (j >= MAGIC) j = j - MAGIC + 1;
 	}
 
-	j = jiapid * MAGIC / PROCS;
+	j = jiapid * MAGIC / jiahosts;
 
 	for (i = 0; i < MAGIC; i++) {
 		r_order[1][i] = j;
 		j = j + MAGIC;
-		if (j >= MAGIC * PROCS) j = j - MAGIC * PROCS + 1;
+		if (j >= MAGIC * jiahosts) j = j - MAGIC * jiahosts + 1;
 	}
 
 	j = 0;
 
 	for (i = 0; i < MAGIC; i++) {
 		o_order[i] = j;
-		j = j + PROCS;
+		j = j + jiahosts;
 		if (j >= MAGIC) j = j - MAGIC + 1;
 	}
 
@@ -93,7 +94,7 @@ int main(int argc, char ** argv)
 			element = 0;
 
 			for (j = 0; j < MAGIC; j++) {
-				temp = r_order[i % 2][j] * SLOT;
+				temp = r_order[i % 2][j] * slot;
 				while (a[temp] > 0) {
 					local[element] = a[temp]; 
 					element++;
@@ -113,17 +114,17 @@ int main(int argc, char ** argv)
 
 			for (j = 0; j < element; j++) {
 				remainder = (local[j] >> (i * BIT)) % MAGIC;
-				if (count[remainder] == SLOT - 1) {
+				if (count[remainder] == (slot - 1)) {
 					jia_error("Number of slots not enough, sorting aborted.\n");
 				} else {  
-					temp = w_order[i % 2][remainder] * SLOT + count[remainder];
+					temp = w_order[i % 2][remainder] * slot + count[remainder];
 					a[temp] = local[j];
 					count[remainder]++;
 				}
 			}
 
 			for (j = 0; j < MAGIC; j++)
-				a[w_order[i % 2][j] * SLOT + count[j]] = 0;
+				a[w_order[i % 2][j] * slot + count[j]] = 0;
 
 			jia_barrier();
 		}
@@ -138,7 +139,7 @@ int main(int argc, char ** argv)
 	if (jiapid == 0) {      
 		for (k = 0; k < jiahosts; k++) {
 			for (j = 0; j < MAGIC; j++) {
-				temp = (r_order[stage % 2][j] + k * MAGIC) * SLOT;
+				temp = (r_order[stage % 2][j] + k * MAGIC) * slot;
 				while (a[temp] > 0) {
 					if (value > a[temp])
 						error = 1;
