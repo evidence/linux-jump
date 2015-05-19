@@ -1,8 +1,13 @@
+/**
+ * This example implements Merge Sort on top of the Jump DSM system.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "jia.h"
+#include "time.h"
 
-#define KEY    2097152                      /* numbers to be sorted */
+#define KEY    2097152                  /* numbers to be sorted */
 #define SEED         1
 
 unsigned int *a;
@@ -11,7 +16,8 @@ int main(int argc, char ** argv)
 {
 	unsigned int *local;
 	unsigned int i, count1, count2, count3, temp;
-	double time1, time2, time3, time4, time5, t1, t2, x1, x2, x3;   
+	double t1, t2, x1, x2, x3;   
+	struct timeval time1, time2, time3, time4, time5;
 	unsigned int magic, allocate, start;
 	int stage;
 
@@ -19,7 +25,7 @@ int main(int argc, char ** argv)
 	jia_barrier();
 
 	magic = KEY / jiahosts;
-	time1 = jia_clock();
+	gettime(&time1);
 
 	a = (unsigned int *) 
 		jia_alloc(KEY * sizeof(unsigned int));
@@ -35,7 +41,7 @@ int main(int argc, char ** argv)
 		malloc(magic * allocate * sizeof(unsigned int));
 
 	jia_barrier();
-	time2 = jia_clock();
+	gettime(&time2);
 
 	srand(jiapid+SEED);
 
@@ -61,7 +67,7 @@ int main(int argc, char ** argv)
 	printf("Shared memory init Timing = %2.8f\n", x3-x2);
 
 	jia_barrier();
-	time3 = jia_clock();
+	gettime(&time3);
 
 	/* the real sorting comes here */
 
@@ -117,11 +123,6 @@ int main(int argc, char ** argv)
 
 		t1 = jia_clock();
 
-		if (t2 > 0)
-			printf("Substage Timing t1 - t2 = %f\n", t1 - t2);
-		else
-			printf("Substage Timing t1 - time3 = %f\n", t1 - time3);
-
 		jia_barrier();
 
 		t2 = jia_clock();
@@ -131,7 +132,7 @@ int main(int argc, char ** argv)
 		stage *= 2;
 	}
 
-	time4 = jia_clock();
+	gettime(&time4);
 
 	if (jiapid == 0)
 	{
@@ -142,10 +143,14 @@ int main(int argc, char ** argv)
 			}
 	}
 
-	time5 = jia_clock();
+	gettime(&time5);
 
-	printf("Time\t%f\t%f\t%f\t%f\t%f\t%f\n", time2-time1, time3-time2,
-			time4-time3, time5-time4, time5-time5, time5-time1);
+	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
+	printf("Partial time 2 (parallel):\t %ld", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
+
 
 	jia_exit();
 

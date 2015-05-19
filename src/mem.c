@@ -297,7 +297,8 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 	unsigned int faultpage;
 	sigset_t set, oldset;
 	ucontext_t *uctx = (ucontext_t *) context;
-	fprintf(stderr, "sigsegv_handler: received signal %d\n", sig);
+	if (sig != SIGSEGV)
+		fprintf(stderr, "ERROR: sigsegv_handler received signal %d\n", sig);
 	if ((sip == NULL) || (context == NULL))
 		fprintf(stderr, "ERROR: NULL parameters to sigsegv_handler!");
 

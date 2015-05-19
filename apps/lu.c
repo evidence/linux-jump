@@ -1,8 +1,13 @@
+/**
+ * This example implements LU Factorization on top of the Jump DSM system.
+ */
+
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include "jia.h"
+#include "time.h"
 
 #define N         512
 #define CHECK     1
@@ -144,33 +149,38 @@ void checka()
 
 int main(int argc, char **argv)
 {
-	float tt1, tt2, tt3, tt4, tt5;
+	struct timeval time1, time2, time3, time4, time5;
 
 	printf("Seed is %lu\n", flag);
 
 	jia_init(argc,argv);
 
 	jia_barrier();
-	tt1 = jia_clock();
+	gettime(&time1);
 
 	a=(double (*)[N])jia_alloc3(N*N*sizeof(double),(N*N*sizeof(double))/jiahosts,0);
 
 	jia_barrier();
-	tt2 = jia_clock();
+	gettime(&time2);
 
 	seqinita(flag);
 	jia_barrier();
-	tt3 = jia_clock();
+	gettime(&time3);
 	lua();
 	jia_barrier();
-	tt4 = jia_clock();
+	gettime(&time4);
 
 	checka();
 	jia_barrier(); 
-	tt5 = jia_clock();
+	gettime(&time5);
 
-	printf("Time\t%f\t%f\t%f\t%f\t%f\t%f\n", 
-			tt2-tt1, tt3-tt2, tt4-tt3, tt5-tt4, tt5-tt5, tt5-tt1);
+	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
+
+
 
 	jia_exit();
 

@@ -1,6 +1,11 @@
+/**
+ * This example implements Radix Sort on top of the Jump DSM system.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "jia.h"
+#include "time.h"
 
 #define MAGIC       16                      /* number of slots */
 #define BIT          4                      /* 2 ^ 4 = 16 */
@@ -18,7 +23,7 @@ int main(int argc, char ** argv)
 	unsigned int value;
 	int i, j, k, element, stage, error;
 	int remainder, temp1, temp2, temp3, temp;
-	double time1, time2, time3, time4, time5;
+	struct timeval time1, time2, time3, time4, time5;
 
 	int r_order[2][16], w_order[2][16];
 	int o_order[16];
@@ -26,7 +31,7 @@ int main(int argc, char ** argv)
 	jia_init(argc, argv);
 
 	jia_barrier();
-	time1 = jia_clock();
+	gettime(&time1);
 
 	a = (unsigned int *) 
 		jia_alloc(PROCS * MAGIC * SLOT * sizeof(unsigned int));
@@ -34,7 +39,7 @@ int main(int argc, char ** argv)
 	local = (unsigned int *) malloc(KEY * sizeof(unsigned int));
 
 	jia_barrier();
-	time2 = jia_clock();
+	gettime(&time2);
 
 	j = 0;
 
@@ -85,7 +90,7 @@ int main(int argc, char ** argv)
 	stage = sizeof(unsigned int) * 8 / BIT;
 
 	jia_barrier();
-	time3 = jia_clock();
+	gettime(&time3);
 
 	for (i = 0; i < stage; i++)
 	{
@@ -136,7 +141,7 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	time4 = jia_clock();
+	gettime(&time4);
 
 	error = 0;
 	value = 0;
@@ -172,10 +177,13 @@ int main(int argc, char ** argv)
 
 	}
 
-	time5 = jia_clock();
+	gettime(&time5);
 
-	printf("Time\t%f\t%f\t%f\t%f\t%f\t%f\n", time2-time1, time3-time2,
-			time4-time3, time5-time4, time5-time5, time5-time1);
+	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
 
 	jia_exit();
 

@@ -1,6 +1,11 @@
+/**
+ * This example implements the Bucket Sort (BK) on top of the Jump DSM system.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "jia.h"
+#include "time.h"
 
 #define BUCKETS       256         /* number of buckets for each proc */
 #define SEED            1
@@ -34,7 +39,7 @@ int main(int argc, char ** argv)
 	int j, k, x, y, counter, z;
 	unsigned int i;
 	int temp1, temp2, temp3, temp, start, locked;
-	double time1, time2, time3, time4, time5, time6;
+	struct timeval time1, time2, time3, time4, time5, time6;
 	unsigned int KEY, RANGE, MAGIC, BSIZE, PAGES;
 
 	if (argc >= 2)
@@ -52,7 +57,7 @@ int main(int argc, char ** argv)
 	jia_init(argc, argv);
 
 	jia_barrier();
-	time1 = jia_clock();
+	gettime(&time1);
 
 	BSIZE = KEY / jiahosts / BUCKETS;
 	PAGES = BSIZE / 1024 + 1;
@@ -65,7 +70,7 @@ int main(int argc, char ** argv)
 
 	jia_barrier();
 	printf("Stage 1: Memory allocation done!\n");
-	time2 = jia_clock();
+	gettime(&time2);
 
 	srand(jiapid+SEED);
 
@@ -87,7 +92,7 @@ int main(int argc, char ** argv)
 	}
 
 	jia_barrier();
-	time3 = jia_clock();
+	gettime(&time3);
 	printf("Stage 2: %d Integers initialized!\n", KEY / jiahosts);
 
 	for (i = 0; i < BUCKETS * 16; i++)
@@ -110,7 +115,7 @@ int main(int argc, char ** argv)
 	}
 
 	jia_barrier();
-	time4 = jia_clock();
+	gettime(&time4);
 	printf("Stage 3: Distribution done! (%u)\n", KEY);
 
 	RANGE = RANGE / jiahosts;
@@ -180,7 +185,7 @@ int main(int argc, char ** argv)
 	}
 
 	jia_barrier();
-	time5 = jia_clock();
+	gettime(&time5);
 	printf("Stage 4: Local Sorting done! (%u)\n", KEY);
 
 	counter = 0;
@@ -236,7 +241,7 @@ int main(int argc, char ** argv)
 	if (locked == 1) jia_unlock(jiapid+1);   
 
 	jia_barrier();
-	time6 = jia_clock();
+	gettime(&time6);
 	printf("Stage 5: Write back to array done!\n");
 
 	if (jiapid == 0)
@@ -245,9 +250,11 @@ int main(int argc, char ** argv)
 				printf("Error in keys %d (%d) and %d (%d)\n", i, b[i], i+1,
 						b[i+1]);
 
-	printf("Time\t%f\t%f\t%f\t%f\t%f\t%f\n", time2-time1, time3-time2,
-			time4-time3, time5-time4, time6-time5, time6-time1);
-
+	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
 	jia_exit();
 
 	return 0;

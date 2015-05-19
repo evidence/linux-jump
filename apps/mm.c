@@ -1,5 +1,10 @@
+/**
+ * This example implements Matrix Multiplication on top of the Jump DSM system.
+ */
+
 #include <stdio.h>
 #include "jia.h"
+#include "time.h"
 
 extern unsigned int jia_startstat();
 
@@ -26,14 +31,14 @@ void seqinit()
 int main(int argc, char **argv)
 {
 	int x, y, z, p, magic;
-	float t0, t1, t2, t3, t4, t5;
+	struct timeval time0, time1, time2, time3, time4, time5;
 	int error;
 	int local[N][N] = { {0} };
 
 	jia_init(argc, argv);
 
 	jia_barrier();
-	t0 = jia_clock();
+	gettime(&time0);
 
 	a = (int (*)[N])jia_alloc(N * N * sizeof(int));
 	b = (int (*)[N])jia_alloc(N * N * sizeof(int));
@@ -45,7 +50,7 @@ int main(int argc, char **argv)
 		printf("NOTE: There is false sharing in this program execution!\n");
 
 	jia_barrier();
-	t1 = jia_clock();
+	gettime(&time1);
 
 	printf("STAT: starting barrier\n");
 	jia_barrier();
@@ -62,7 +67,7 @@ int main(int argc, char **argv)
 	magic = N / jiahosts;
 
 	jia_startstat();
-	t2 = jia_clock();
+	gettime(&time2);
 
 	/* printf("Calculating local ....................\n"); */
 	for (x = jiapid * magic; x < (jiapid + 1) * magic; x++)
@@ -75,7 +80,7 @@ int main(int argc, char **argv)
 	jia_barrier();
 	/* printf("STAT: exiting barrier\n"); */
 
-	t3 = jia_clock();
+	gettime(&time3);
 
 	for (x = 0; x < jiahosts; x++) 
 	{
@@ -101,7 +106,7 @@ int main(int argc, char **argv)
 	jia_barrier();
 	/* printf("STAT: exiting barrier\n"); */
 
-	t4 = jia_clock();
+	gettime(&time4);
 
 	if (jiapid == 0)
 	{
@@ -129,9 +134,15 @@ int main(int argc, char **argv)
 			printf("NOTE: There is some error in the program!\n");
 	}
 
-	t5 = jia_clock();
-	printf("Time\t%f\t%f\t%f\t%f\t%f\t%f\n", t1-t0, t2-t1, t3-t2, t4-t3,
-			t5-t4, t5-t0);
+	gettime(&time5);
+
+	printf("Partial time 0:\t\t %ld", time_diff_sec(&time1, &time0));
+	printf("Partial time 1:\t\t %ld", time_diff_sec(&time2, &time1));
+	printf("Partial time 2:\t\t %ld", time_diff_sec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld", time_diff_sec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld", time_diff_sec(&time5, &time4));
+	printf("Total time:\t\t %ld", time_diff_sec(&time5, &time1));
+
 
 	jia_exit();
 	return 0;
