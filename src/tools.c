@@ -1,4 +1,24 @@
+#include <sys/time.h>
+#include <stdio.h>
+
+unsigned long start_sec = 0; 
+unsigned long start_msec = 0;  
+
+unsigned int get_usecs()
+{
+	static struct timeval base;
+	struct timeval time;
+
+	gettimeofday(&time, NULL);
+	if (!base.tv_usec) {
+		base = time;
+	}
+	return ((time.tv_sec - base.tv_sec) * 1000000 +
+			(time.tv_usec - base.tv_usec));
+}
+
 #ifndef NULL_LIB
+
 #include "global.h"
 #include "init.h"
 #include "mem.h"
@@ -163,13 +183,13 @@ void debugmsg(jia_msg_t *msg, int right)
 	SPACE(right); printf("msg.data    = 0x%8lx\n",stol(msg->data+8));
 }
 #else
-void debugmsg(jia_msg_t *msg, int right){}
+void debugmsg(jia_msg_t *msg, int right)
+{
+	/* Silent compiler warnings: */
+	(void) msg;
+	(void) right;
+}
 #endif /* JIA_DEBUG */
-
-/*-----------------------------------------------------------*/
-
-unsigned long start_sec = 0; 
-unsigned long start_msec = 0;  
 
 /*-----------------------------------------------------------*/
 unsigned long jia_current_time()
@@ -239,26 +259,5 @@ void enable_sigalrm()
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
 }
 
-/*-----------------------------------------------------------*/
-
-#else  /* NULL_LIB */
-#include <sys/time.h>
-
-unsigned long start_sec = 0; 
-unsigned long start_msec = 0;  
-
 #endif /* NULL_LIB */
 
-/*-----------------------------------------------------------*/
-unsigned int get_usecs()
-{
-	static struct timeval base;
-	struct timeval time;
-
-	gettimeofday(&time, NULL);
-	if (!base.tv_usec) {
-		base = time;
-	}
-	return ((time.tv_sec - base.tv_sec) * 1000000 +
-			(time.tv_usec - base.tv_usec));
-}
