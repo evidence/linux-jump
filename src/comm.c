@@ -63,6 +63,7 @@
 #ifndef NULL_LIB
 #include "comm.h"
 #include "mem.h"
+#include "assert.h"
 
 
 int oldsigiomask;
@@ -91,7 +92,6 @@ int oldsigiomask;
 extern host_t hosts[Maxhosts];
 extern int jia_pid; 
 extern int hostc;
-extern char errstr[Linesize];
 extern int msgbusy[Maxmsgs];
 extern jia_msg_t msgarray[Maxmsgs];
 extern int msgcnt;
@@ -143,8 +143,6 @@ volatile int outhead, outtail, outcount;
 
 long Startport; /*< First port used for communication */ 
 
-extern void assert(int, char *);
-extern void assert0(int, char *);
 extern unsigned long jia_current_time();
 extern void disable_sigio_sigalrm();
 extern void enable_sigio();
@@ -164,16 +162,16 @@ int create_req_socket(unsigned long port)
 	struct sockaddr_in addr;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	assert0((fd != -1), "create_req_socket()-->socket()");
+	ASSERT((fd != -1), "create_req_socket()-->socket()");
 
 	/* set the buffer size for send and receive sockets */
 	size = (Maxmsgsize + Msgheadsize + 128) * 16;
 	res = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *)&size, sizeof(size));
-	assert0((res == 0), "create_req_socket()-->setsockopt(): SO_RCVBUF");
+	ASSERT((res == 0), "create_req_socket()-->setsockopt(): SO_RCVBUF");
 
 	size = (Maxmsgsize + Msgheadsize + 128) * 16;
 	res = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof(size));
-	assert0((res == 0), "create_req_socket()-->setsockopt(): SO_SNDBUF");
+	ASSERT((res == 0), "create_req_socket()-->setsockopt(): SO_SNDBUF");
 
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
@@ -181,7 +179,7 @@ int create_req_socket(unsigned long port)
 	addr.sin_port = htons(port);
 
 	res = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
-	assert0((res == 0), "create_req_socket()-->bind()");
+	ASSERT((res == 0), "create_req_socket()-->bind()");
 	return fd;
 }
 
@@ -197,7 +195,7 @@ int create_rep_socket(unsigned long port)
 	struct sockaddr_in addr;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	assert0((fd != -1), "create_rep_socket()-->socket()");
+	ASSERT((fd != -1), "create_rep_socket()-->socket()");
 
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
@@ -205,7 +203,7 @@ int create_rep_socket(unsigned long port)
 	addr.sin_port = htons(port);
 
 	res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
-	assert0((res == 0), "create_rep_socket()-->bind()");
+	ASSERT((res == 0), "create_rep_socket()-->bind()");
 	return fd;
 }
 
@@ -234,7 +232,7 @@ void msgserver()
 		case STATGRANT: statgrantserver(&inqh); break;
 #endif 
 		default:        debugmsg(&inqh, 1);
-				assert0(0, "msgserver(): Incorrect Message!");
+				ASSERT(0, "msgserver(): Incorrect Message!");
 				break;
 	}
 }
@@ -290,21 +288,20 @@ void sigio_handler()
 	while (res > 0) {
 		for (i = 0; i < hostc; i++) 
 			if ((i != jia_pid) && (FD_ISSET(commreq.rcv_fds[i], &readfds))) {
-				assert0((incount < Maxqueue), 
-						"sigio_handler(): Inqueue exceeded!");
+				ASSERT((incount < Maxqueue), "sigio_handler(): Inqueue exceeded!");
 
 				s = sizeof(from);
 				res = recvfrom(commreq.rcv_fds[i], (char *)&(inqt),
 						Maxmsgsize + Msgheadsize, 0, (struct sockaddr *)&from,
 						&s);
-				assert0((res >= 0), "sigio_handler()-->recvfrom()");
+				ASSERT((res >= 0), "sigio_handler()-->recvfrom()");
 				to.sin_family = AF_INET;
 				memcpy(&to.sin_addr, hosts[inqt.frompid].addr, 
 						hosts[inqt.frompid].addrlen);
 				to.sin_port = htons(repports[inqt.frompid][inqt.topid]);
 				res = sendto(commrep.snd_fds[i], (char *)&(inqt.seqno),
 						sizeof(inqt.seqno), 0, (struct sockaddr *)&to, sizeof(to));
-				assert0((res != -1), "sigio_handler()-->sendto() ACK");
+				ASSERT((res != -1), "sigio_handler()-->sendto() ACK");
 				if (inqt.seqno > ((signed) commreq.rcv_seq[i])) {
 #ifdef DOSTAT
 					if (inqt.frompid != inqt.topid) {
@@ -367,7 +364,7 @@ void sigio_handler()
 
 void sigint_handler()    /* Invoked by user pressing Ctrl-C */
 {
-	assert(0,"Exit by user!!\n");
+	RASSERT(0, "Exit by user!!\n");
 }
 
 
@@ -395,14 +392,14 @@ void initcomm()
 	sigaddset(&act.sa_mask, SIGALRM);
 	act.sa_flags = SA_RESTART;   /* Must be here for Linux 2.2 */
 	if (sigaction(SIGIO, &act, NULL))
-		assert0(0, "ERROR: initcomm(): SIGIO problem");
+		ASSERT(0, "ERROR: initcomm(): SIGIO problem");
 
 	/* Set up SIGINT handler: */
 	act.sa_handler = (void_func_handler)sigint_handler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_NODEFER;
 	if (sigaction(SIGINT, &act, NULL))
-		assert0(0, "ERROR: initcomm(): SIGINT problem");
+		ASSERT(0, "ERROR: initcomm(): SIGINT problem");
 
 	/***********Initialize comm ports********************/
 
@@ -425,10 +422,10 @@ void initcomm()
 		commreq.rcv_maxfd = MAX(fd+1, commreq.rcv_maxfd);
 
 		if (0 > fcntl(commreq.rcv_fds[i], F_SETOWN, getpid()))
-			assert0(0, "initcomm()-->fcntl(..F_SETOWN..)");
+			ASSERT(0, "initcomm()-->fcntl(..F_SETOWN..)");
 
 		if (0 > fcntl(commreq.rcv_fds[i], F_SETFL, FASYNC))
-			assert0(0, "initcomm()-->fcntl(..F_SETFL..)");
+			ASSERT(0, "initcomm()-->fcntl(..F_SETFL..)");
 
 		fd = create_req_socket(0);
 		commreq.snd_fds[i] = fd;
@@ -481,7 +478,7 @@ void outsend()
 
 	if (toproc == fromproc) {
 		BEGINCS;
-		assert0((incount <= Maxqueue), "outsend(): Inqueue exceeded!");
+		ASSERT((incount <= Maxqueue), "outsend(): Inqueue exceeded!");
 		commreq.rcv_seq[toproc] = outqh.seqno;
 		memcpy(&(inqt), &(outqh), Msgheadsize + outqh.size);
 		debugmsg(&(inqt), 1);
@@ -522,7 +519,7 @@ void outsend()
 			BEGINCS;
 			res=sendto(commreq.snd_fds[toproc], (char *)&(outqh),msgsize, 0,
 					(struct sockaddr *)&to, sizeof(to));
-			assert0((res != -1), "outsend()-->sendto()");
+			ASSERT((res != -1), "outsend()-->sendto()");
 			ENDCS;
 
 			arrived = 0;
@@ -573,9 +570,7 @@ void outsend()
 			printf("Going to can't send error!, sendsuccess = %d\n",
 					sendsuccess);
 			printf("Outqueue head size %d, mesg size %d\n", outqh.size, msgsize);
-			sprintf(errstr, "Can't asend message (%d,%d) to host %d!", outqh.op,
-					outqh.seqno, toproc); 
-			assert0((sendsuccess == 1), errstr);
+			ASSERT((sendsuccess == 1), "Can't asend message (%d,%d) to host %d!", outqh.op, outqh.seqno, toproc);
 		}
 	}
 } 
@@ -590,7 +585,7 @@ void asendmsg(jia_msg_t *msg)
 #endif
 
 	BEGINCS;
-	assert0((outcount < Maxqueue), "asendmsg(): Outqueue exceeded!");
+	ASSERT((outcount < Maxqueue), "asendmsg(): Outqueue exceeded!");
 	msg->syn=0;
 	memcpy(&(outqt), msg, Msgheadsize + msg->size);
 	commreq.snd_seq[msg->topid]++;

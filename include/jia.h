@@ -81,7 +81,6 @@ void           jia_unlock(int);
 void           jia_barrier();
 void           jia_wait();
 void           jia_exit();
-void           jia_error(char*, ...);
 float          jia_clock();
 
 extern int	jia_pid;

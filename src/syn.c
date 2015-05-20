@@ -63,8 +63,8 @@
 #include "mem.h"
 #include "syn.h"
 #include "comm.h"
+#include "assert.h"
 
-extern void assert(int cond, char *errstr);
 extern jia_msg_t *newmsg();
 extern void freemsg(jia_msg_t*);
 extern void printmsg(jia_msg_t *msg,int right);
@@ -141,7 +141,6 @@ extern int oaccess[Maxlocks][LENGTH];
 extern jiapage_t page[Maxmempages + 1];
 extern jiacache_t cache[Cachepages + 1];
 
-extern char errstr[Linesize];
 extern volatile int diffwait;
 
 #ifdef DOSTAT
@@ -266,11 +265,10 @@ void jia_lock(int lock)
 	jiastat.kernelflag = 1;
 #endif
 
-	sprintf(errstr, "lock %d should range from 0 to %d", lock, Maxlocks - 1);
-	assert(((lock >= 0) && (lock < Maxlocks)), errstr);
+	RASSERT(((lock >= 0) && (lock < Maxlocks)), "lock %d should range from 0 to %d", lock, Maxlocks - 1);
+
 	for (i = 0; i <= stackptr; i++)
-		assert((lockstack[i].lockid != lock),
-				"Embeding of the same lock is not allowed!");
+		RASSERT((lockstack[i].lockid != lock), "Embedding of the same lock is not allowed!");
 
 	bank = lock;
 
@@ -356,10 +354,9 @@ void jia_unlock(int lock)
 	jiastat.kernelflag = 1;
 #endif
 
-	sprintf(errstr, "lock %d should range from 0 to %d", lock, Maxlocks - 1);
-	assert(((lock >= 0) && (lock < Maxlocks)), errstr);
+	RASSERT(((lock >= 0) && (lock < Maxlocks)), "lock %d should range from 0 to %d", lock, Maxlocks - 1);
 
-	assert((lock == top.lockid), "lock and unlock should be used in pair!");
+	RASSERT((lock == top.lockid), "lock and unlock should be used in pair!");
 
 	disable_sigio_sigalrm();
 	if (leftout != -1) {
@@ -947,7 +944,7 @@ void pushstack(int lock)
 	enable_sigio();
 
 	stackptr++;
-	assert((stackptr < Maxstacksize), "Too many continuous ACQUIRES!");
+	RASSERT((stackptr < Maxstacksize), "Too many continuous ACQUIRES!");
 
 	top.lockid = lock;
 
@@ -972,7 +969,7 @@ void popstack(int lock)
 #endif
 
 	stackptr--;
-	assert((stackptr >= -1),"More unlocks than locks!");
+	RASSERT((stackptr >= -1),"More unlocks than locks!");
 
 	leftout = lockstack[stackptr + 1].lockid;
 	disable_sigio_sigalrm();
@@ -1425,15 +1422,14 @@ void acqserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == ACQ) && (req->topid == jia_pid),
-			"Incorrect ACQ message!");
+	RASSERT((req->op == ACQ) && (req->topid == jia_pid), "Incorrect ACQ message!");
 #endif
 
 	lock = (int)stol(req->data);
 	from = (int)stol(req->data + 4);
 
 #ifdef MHPDEBUG
-	assert((lock % hostc == jia_pid),"Incorrect home of lock!");
+	RASSERT((lock % hostc == jia_pid),"Incorrect home of lock!");
 #endif
 
 	locks[lock].acqs[locks[lock].acqc] = req->frompid;
@@ -1486,16 +1482,14 @@ void relserver(jia_msg_t *req)
 	printf("I should not be called!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
 #ifdef MHPDEBUG
-	assert((req->op == REL) && (req->topid == jia_pid),
-			"Incorrect REL Message!"); 
+	RASSERT((req->op == REL) && (req->topid == jia_pid), "Incorrect REL Message!"); 
 #endif
 
 	lock = (int)stol(req->data);
 
 #ifdef MHPDEBUG
-	assert((lock % hostc == jia_pid),"Incorrect home of lock!");
-	assert((req->frompid == locks[lock].acqs[0]),
-			"Relserver: This should not have happened!");
+	RASSERT((lock % hostc == jia_pid),"Incorrect home of lock!");
+	RASSERT((req->frompid == locks[lock].acqs[0]), "Relserver: This should not have happened!");
 #endif
 
 	if (req->binterval > barrinterval) noclearlocks = 1;
@@ -1530,16 +1524,14 @@ void barrserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == BARR) && (req->topid == jia_pid),
-			"Incorrect BARR Message!");
+	RASSERT((req->op == BARR) && (req->topid == jia_pid), "Incorrect BARR Message!");
 #endif
 
 	lock = (int)stol(req->data);
 
 #ifdef MHPDEBUG
-	assert((lock % hostc == jia_pid), "Incorrect home of lock!");
-	assert((lock == hidelock),
-			"Barserver: This should not have happened!");
+	RASSERT((lock % hostc == jia_pid), "Incorrect home of lock!");
+	RASSERT((lock == hidelock), "Barserver: This should not have happened!");
 #endif
 
 	recordwtnts(req); 
@@ -1567,8 +1559,7 @@ void waitserver(jia_msg_t *req)
 	jia_msg_t *grant;
 	int i;
 
-	assert((req->op == WAIT) && (req->topid == jia_pid),
-			"Incorrect WAIT Message!");
+	RASSERT((req->op == WAIT) && (req->topid == jia_pid), "Incorrect WAIT Message!");
 	waitcounter++;
 
 	if (waitcounter == hostc) {
@@ -1604,7 +1595,7 @@ void recordwtnts(jia_msg_t *req)
 	if (count > 0) {  
 
 #ifdef MHPDEBUG
-		assert((lock < Maxlocks + Maxcondvs), "Error in recordwtnts!\n");
+		RASSERT((lock < Maxlocks + Maxcondvs), "Error in recordwtnts!\n");
 #endif
 
 		for (i = 0; i < count; i++) {
@@ -1640,14 +1631,13 @@ void wtntserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == WTNT) && (req->topid == jia_pid),
-			"Incorrect WTNT Message!"); 
+	RASSERT((req->op == WTNT) && (req->topid == jia_pid), "Incorrect WTNT Message!"); 
 #endif
 
 
 #ifdef MHPDEBUG
 	int lock = (int)stol(req->data);
-	assert((lock % hostc == jia_pid), "Incorrect home of lock!");
+	RASSERT((lock % hostc == jia_pid), "Incorrect home of lock!");
 #endif
 
 	recordwtnts(req); 
@@ -1683,8 +1673,7 @@ void invalidate(jia_msg_t *req)
 	if (count > 0) {
 
 #ifdef MHPDEBUG
-		assert((lock < Maxlocks + Maxcondvs), 
-				"Invalidate: Unexpected error!\n");
+		RASSERT((lock < Maxlocks + Maxcondvs), "Invalidate: Unexpected error!\n");
 #endif
 
 		for (i = 0; i < count; i++) {
@@ -1727,14 +1716,11 @@ void invalidate(jia_msg_t *req)
 						|| page[pagei].state == RW) {
 
 #ifdef MHPDEBUG
-					assert((page[pagei].cachei == Cachepages),
-							"Invalidate: Unexpected Error\n");
+					RASSERT((page[pagei].cachei == Cachepages), "Invalidate: Unexpected Error\n");
 #endif
 
-					if (page[pagei].state == RW) {
-						sprintf(errstr, "Page %d still RW, quite unexpected.\n", pagei);
-						assert((0 == 1), errstr);
-					}
+					if (page[pagei].state == RW)
+						RASSERT((0 == 1),  "Page %d still RW, quite unexpected.\n", pagei);
 
 					page[pagei].state = INV;
 					memprotect((caddr_t)page[pagei].addr, Pagesize, PROT_NONE);
@@ -1767,8 +1753,7 @@ void invserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == INVLD) && (req->topid == jia_pid),
-			"Incorrect INVLD Message!"); 
+	RASSERT((req->op == INVLD) && (req->topid == jia_pid), "Incorrect INVLD Message!"); 
 #endif
 
 	invalidate(req);
@@ -1793,8 +1778,7 @@ void barrgrantserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == BARRGRANT) && (req->topid == jia_pid),
-			"Incorrect BARRGRANT Message!"); 
+	RASSERT((req->op == BARRGRANT) && (req->topid == jia_pid), "Incorrect BARRGRANT Message!"); 
 #endif
 
 	if (noclearlocks == 0) clearlocks();
@@ -1830,8 +1814,7 @@ void acqgrantserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == ACQGRANT) && (req->topid == jia_pid),
-			"Incorrect ACQGRANT Message!"); 
+	RASSERT((req->op == ACQGRANT) && (req->topid == jia_pid), "Incorrect ACQGRANT Message!"); 
 #endif
 
 	lock = (int)stol(req->data);
@@ -1851,8 +1834,7 @@ void acqgrantserver(jia_msg_t *req)
 
 void waitgrantserver(jia_msg_t *req)
 {
-	assert((req->op == WAITGRANT) && (req->topid == jia_pid),
-			"Incorrect WAITGRANT Message!");
+	RASSERT((req->op == WAITGRANT) && (req->topid == jia_pid), "Incorrect WAITGRANT Message!");
 	waitwait = 0;
 }
 

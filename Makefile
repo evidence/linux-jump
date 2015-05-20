@@ -3,12 +3,16 @@
 ARCH_FLAGS  = -D_GNU_SOURCE -DCachepages=1024 -DARCH_X86
 
 export CC  = gcc
-export CFLAGS	= -I../include $(ARCH_FLAGS) -Wall -Wextra -pedantic -g -O0
+export CFLAGS	= -I../include $(ARCH_FLAGS) -Wall -Wextra -pedantic -std=c99 -O0 -g
 
-.PHONY: all clean
+.PHONY: all clean lib apps
 
-all:
+all: lib apps
+
+lib:
 	$(MAKE) -C build
+
+apps:
 	$(MAKE) -C apps
 
 clean:

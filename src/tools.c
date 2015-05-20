@@ -61,13 +61,12 @@
 #include "mem.h"
 #include "syn.h"
 #include "comm.h"
+#include "assert.h"
 
 sigset_t set, prevset;
 
 extern void asendmsg(jia_msg_t *msg);
 
-void assert0(int, char *);
-void assert(int, char *);
 void jiaexitserver(jia_msg_t *req);
 jia_msg_t *newmsg();
 void freemsg(jia_msg_t *msg);
@@ -94,46 +93,9 @@ extern host_t hosts[Maxhosts];
 extern char argv0[Wordsize];
 extern int sigflag;
 
-char errstr[Linesize];
 jia_msg_t msgarray[Maxmsgs];
 volatile int msgbusy[Maxmsgs];
 int msgcnt;
-jia_msg_t assertmsg;
-
-
-/*-----------------------------------------------------------*/
-void assert0(int cond, char *amsg)
-{ 
-	if (!cond) {
-		fprintf(stderr,"Assert0 error from host %d --- %s\n", jia_pid, amsg);
-		perror("Unix Error");
-		fflush(stderr); 
-		fflush(stdout);
-		exit(-1);
-	}
-}
-
-
-/*-----------------------------------------------------------*/
-void assert(int cond, char *amsg)
-{
-	int hosti;
-
-	if (!cond) {
-		assertmsg.op = JIAEXIT;
-		assertmsg.frompid = jia_pid; 
-		memcpy(assertmsg.data, amsg, strlen(amsg));
-		assertmsg.data[strlen(amsg)] = '\0';
-		assertmsg.size = strlen(amsg) + 1;
-		for (hosti = 0; hosti < hostc; hosti++)
-			if (hosti != jia_pid) {
-				assertmsg.topid = hosti;
-				asendmsg(&assertmsg);
-			}
-		assertmsg.topid = jia_pid;
-		asendmsg(&assertmsg);
-	} 
-}
 
 /*-----------------------------------------------------------*/
 void jiaexitserver(jia_msg_t *req)
@@ -153,7 +115,7 @@ address_t newtwin()
 	allocsize = Pagesize;
 	twin = (address_t)valloc((size_t)allocsize);
 
-	assert((twin != (address_t)NULL), "Cannot allocate twin space!");
+	RASSERT((twin != (address_t)NULL), "Cannot allocate twin space!");
 	return(twin);
 }
 
@@ -170,7 +132,7 @@ jia_msg_t *newmsg()
 
 	msgcnt++;
 	for (i = 0; (i < Maxmsgs) && (msgbusy[i] != 0); i++);
-	assert0((i < Maxmsgs), "Cannot allocate message space!");
+	ASSERT((i < Maxmsgs), "Cannot allocate message space!");
 	msgbusy[i] = 1;
 
 #ifdef JIA_DEBUG
@@ -193,7 +155,7 @@ void freemsg(jia_msg_t *msg)
 /*-----------------------------------------------------------*/
 void appendmsg(jia_msg_t *msg, const void* str, int len)
 {
-	assert(((msg->size + len) <= Maxmsgsize), "Message too large");
+	RASSERT(((msg->size + len) <= Maxmsgsize), "Message too large");
 	memcpy(msg->data + msg->size, str, len);
 	msg->size += len;
 }
@@ -204,7 +166,7 @@ wtnt_t *newwtnt()
 
 	wnptr = valloc((size_t)sizeof(wtnt_t));
 
-	assert((wnptr != WNULL), "Cannot allocate space for write notices!");
+	RASSERT((wnptr != WNULL), "Cannot allocate space for write notices!");
 	wnptr->more = WNULL;
 	wnptr->wtntc = 0;
 	return(wnptr);
@@ -262,7 +224,6 @@ void debugmsg(jia_msg_t *msg, int right){}
 #endif /* JIA_DEBUG */
 
 /*-----------------------------------------------------------*/
-/* Following programs are used by Shi. 9.10 */
 
 unsigned long start_sec = 0; 
 unsigned long start_msec = 0;  
@@ -336,14 +297,6 @@ void enable_sigalrm()
 }
 
 /*-----------------------------------------------------------*/
-void jia_error(char *str, ...)
-{
-	va_list ap;
-	va_start(ap, str);
-	vsprintf(errstr, str, ap);
-	va_end(ap);
-	assert(0, errstr);
-}
 
 #else  /* NULL_LIB */
 #include <sys/time.h>
@@ -351,11 +304,6 @@ void jia_error(char *str, ...)
 unsigned long start_sec = 0; 
 unsigned long start_msec = 0;  
 
-void jia_error(char *errstr)
-{
-	printf("JUMP error --- %s\n", errstr);
-	exit(-1);
-}
 #endif /* NULL_LIB */
 
 /*-----------------------------------------------------------*/

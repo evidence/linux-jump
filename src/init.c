@@ -61,6 +61,7 @@
 #include "global.h"
 #include "init.h"
 #include "mem.h"
+#include "assert.h"
 
 extern void initmem();
 extern void initsyn();
@@ -68,7 +69,6 @@ extern void initcomm();
 extern void disable_sigio_sigalrm();         
 extern void enable_sigio();       
 extern unsigned long jia_current_time();
-extern void assert0(int, char *);
 extern unsigned int get_usecs();
 
 int jump_getline(int *wordc, char wordv[Maxwords][Wordsize]);
@@ -82,7 +82,6 @@ void redirstdio();
 void jia_init(int argc, char **argv);
 void clearstat();
 
-extern char errstr[Linesize];
 extern long Startport;
 
 FILE *config, *fopen();
@@ -179,12 +178,10 @@ void gethosts()
 	while (!endoffile) {
 		endoffile = jump_getline(&wordc, wordv);
 		linec++;
-		sprintf(errstr, "Line %4d: incorrect host specification!", linec);
-		assert0(((wordc == Wordnum) || (wordc == 0)), errstr);
+		ASSERT((wordc == Wordnum) || (wordc == 0),  "Line %4d: incorrect host specification!", linec);
 		if (wordc != 0) {
 			hostp=gethostbyname(wordv[0]);
-			sprintf(errstr, "Line %4d: incorrect host %s!", linec, wordv[0]);
-			assert0((hostp != NULL), errstr);
+			ASSERT((hostp != NULL), "Line %4d: incorrect host %s!", linec, wordv[0]);
 			strcpy(hosts[hostc].name, hostp->h_name); 
 			memcpy(hosts[hostc].addr, hostp->h_addr, hostp->h_length);
 			hosts[hostc].addrlen = hostp->h_length;
@@ -198,14 +195,12 @@ void gethosts()
 				uniquehost = ((strcmp(hosts[hostc].addr, hosts[i].addr) != 0) ||
 						(strcmp(hosts[hostc].user, hosts[i].user) != 0));
 #endif /*NFS */
-				sprintf(errstr, "Line %4d: repeated spec of the same host!",
-						linec);
-				assert0(uniquehost, errstr);
+				ASSERT(uniquehost, "Line %4d: repeated spec of the same host!", linec);
 			}
 			hostc++; 
 		} 
 	}
-	assert0((hostc <= Maxhosts), "Too many hosts!");
+	ASSERT((hostc <= Maxhosts), "Too many hosts!");
 	fclose(config);
 }
 
@@ -227,8 +222,7 @@ void copyfiles(char *argv)
 		strcat(cmd, hosts[hosti].name);
 		strcat(cmd, ":");
 		rcpyes = system(cmd);
-		sprintf(errstr, "Cannot rcp .jiahosts to %s!\n", hosts[hosti].name);
-		assert0((rcpyes == 0), errstr);
+		ASSERT((rcpyes == 0), "Cannot rcp .jiahosts to %s!\n", hosts[hosti].name);
 
 		cmd[0] = '\0';
 		strcat(cmd, "rcp ");
@@ -239,8 +233,7 @@ void copyfiles(char *argv)
 		strcat(cmd, hosts[hosti].name);
 		strcat(cmd, ":");
 		rcpyes = system(cmd);
-		sprintf(errstr, "Cannot rcp %s to %s!\n", argv, hosts[hosti].name);
-		assert0((rcpyes == 0),errstr);
+		ASSERT((rcpyes == 0), "Cannot rcp %s to %s!\n", argv, hosts[hosti].name);
 	} 
 	printf("Remote copy succeed!\n\n");
 }
@@ -254,12 +247,12 @@ void start_slaves(int argc, char **argv)
 #ifdef NFS
 	char *pwd;
 	pwd = getenv("PWD"); 
-	assert0((pwd != NULL), "Failed to get current working directory");
+	ASSERT((pwd != NULL), "Failed to get current working directory");
 #endif /* NFS */
 
 	printf("******Start to create processes on slaves!******\n\n");
 	Startport = getpid();
-	assert0( (Startport != -1), "getpid() error");
+	ASSERT( (Startport != -1), "getpid() error");
 	Startport = 10000 + (Startport * Maxhosts * Maxhosts * 4) % 10000;
 
 	for (hosti = 1; hosti < hostc; hosti++) {
@@ -284,8 +277,7 @@ void start_slaves(int argc, char **argv)
 		strcat(cmd," &");
 		printf("Starting CMD %s on host %s\n", cmd, hosts[hosti].name);
 		system(cmd);
-		sprintf(errstr, "Fail to start process on %s!", hosts[hosti].name);
-		assert0((hosts[hosti].riofd != -1), errstr);
+		ASSERT((hosts[hosti].riofd != -1),  "Fail to start process on %s!", hosts[hosti].name);
 	}
 }
 
@@ -297,15 +289,15 @@ int mypid()
 	struct hostent *hostp;
 	int i;
 
-	assert0((gethostname(hostname, Wordsize) == 0), "Cannot get hostname!");
+	ASSERT((gethostname(hostname, Wordsize) == 0), "Cannot get hostname!");
 	hostp = gethostbyname(hostname);
-	assert0((hostp != NULL), "Cannot get host address!");
+	ASSERT((hostp != NULL), "Cannot get host address!");
 	printf("hostname = %s\n", hostname);
 	printf("hostp = %s\n", hostp->h_name);
 
 	uid = getuid();
 	userp = getpwuid(uid);
-	assert0((userp != NULL), "Cannot get user name!");
+	ASSERT((userp != NULL), "Cannot get user name!");
 
 	i = 0;
 	strtok(hostname, ".");
@@ -318,7 +310,7 @@ int mypid()
 #endif /* NFS */
 		   i++;
 
-	assert0((i < hostc), "Get Process id incorrect");
+	ASSERT((i < hostc), "Get Process id incorrect");
 	return(i);
 }
 

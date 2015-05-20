@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include "jia.h"
 #include "time.h"
+#include "assert.h"
 
 #define N         512
 #define CHECK     1
@@ -18,7 +19,6 @@
 
 double (*a)[N];                 
 double **old,**new;
-char luerr[80];
 unsigned long int flag=1;
 
 void seqinita()
@@ -67,8 +67,7 @@ void lua()
 				for (i=j+1;(i<N);i++)
 					a[j][i]/=temp;
 			} else {
-				sprintf(luerr,"Matrix a is singular, a[%d][%d]=%f",j,j,a[j][j]);
-				jia_error(luerr); 
+				JIA_ERROR("Matrix a is singular, a[%d][%d]=%f",j,j,a[j][j]);
 			}
 		}
 

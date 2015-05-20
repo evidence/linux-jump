@@ -60,14 +60,14 @@
  **********************************************************************/
 
 #ifndef NULL_LIB
+#include <ucontext.h>
 #include "global.h"
 #include "mem.h"
 #include "init.h"
 #include "comm.h"
 #include "syn.h"
-#include <ucontext.h>
+#include "assert.h"
 
-extern void assert(int cond, char *errstr);
 extern jia_msg_t *newmsg();
 extern void freemsg();
 extern void asendmsg(jia_msg_t *req);
@@ -77,7 +77,6 @@ extern void freetwin(address_t twin);
 extern void enable_sigio();
 extern void disable_sigio_sigalrm();
 extern void appendmsg(jia_msg_t *msg, unsigned char *str, int len);
-extern void assert0(int cond, char *amsg);
 
 
 int findposition(address_t addr);
@@ -96,7 +95,6 @@ unsigned int oaccess[Maxlocks][LENGTH];
 extern int jia_pid;
 extern host_t hosts[Maxhosts];
 extern int hostc;
-extern char errstr[Linesize];
 extern jiastack_t lockstack[Maxstacksize];
 extern int stackptr;
 
@@ -257,7 +255,7 @@ void getpage(address_t addr, int writeflag)
 	homeid = homehost(addr);
 
 #ifdef MHPDEBUG
-	assert((homeid != jia_pid), "This should not have happened (2)");
+	RASSERT((homeid != jia_pid), "This should not have happened (2)");
 #endif
 
 	req = newmsg();
@@ -343,10 +341,11 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 #endif
 
 	faultpage = (unsigned int) homepage(faultaddr);
-	sprintf(errstr, "Access shared memory out of range from 0x%x to 0x%lx!, faultaddr = 0x%lx, writefault = 0x%x", Startaddr,
+	RASSERT((((unsigned long)faultaddr < (Startaddr + globaladdr)) && 
+				((unsigned long)faultaddr >= Startaddr)), 
+				"Access shared memory out of range from 0x%x to 0x%lx!, faultaddr = 0x%lx, writefault = 0x%x", Startaddr,
 			Startaddr + globaladdr, (unsigned long int) faultaddr, writefault);
-	assert((((unsigned long)faultaddr < (Startaddr + globaladdr)) && 
-				((unsigned long)faultaddr >= Startaddr)), errstr);
+
 
 #ifdef DOSTAT
 	if (writefault)
@@ -372,18 +371,16 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 
 		if (temp == Maxhosts) {
 			if (!writefault) {
-				assert((0 == 1), "Unexpected error 5-1!\n");
+				RASSERT((0 == 1), "Unexpected error 5-1!\n");
 			} else {
 
 #ifdef MHPDEBUG
 				if (!(page[faultpage].state == RO &&
-							page[faultpage].pend[jia_pid] == 0)) {
-					sprintf(errstr, 
-							"Error 5-2: Page %d, state %d (RO), pend[%d] = %d (0).\n",
+							page[faultpage].pend[jia_pid] == 0))
+					RASSERT((0 == 1), "Error 5-2: Page %d, state %d (RO), pend[%d] = %d (0).\n",
 							faultpage, page[faultpage].state,
 							jia_pid, page[faultpage].pend[jia_pid]);
-					assert((0 == 1), errstr);
-				}
+
 #endif
 
 				if (page[faultpage].pend[jia_pid] == 0) {
@@ -483,14 +480,11 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 #ifdef MHPDEBUG
 				if (!(page[faultpage].pend[jia_pid] == 1 &&
 							page[faultpage].oldhome == jia_pid && writefault))
-				{
-					sprintf(errstr, 
-							"Error: page[%d].pend[%d] = %d, oldhome %d (%d), wf %d.\n",
+					RASSERT((0 == 1), "Error: page[%d].pend[%d] = %d, oldhome %d (%d), wf %d.\n",
 							faultpage, jia_pid, 
 							page[faultpage].pend[jia_pid],
 							page[faultpage].oldhome, jia_pid, writefault);
-					assert((0 == 1), errstr);
-				}
+
 #endif
 
 #ifdef DOSTAT
@@ -653,7 +647,7 @@ void initmem()
 		sigemptyset(&act.sa_mask);
 		act.sa_flags = SA_NODEFER|SA_SIGINFO;
 		if (sigaction(SIGSEGV, &act, NULL))
-			assert0(0,"segv sigaction problem");
+			ASSERT(0,"segv sigaction problem");
 	}
 
 	for (i = 0; i < Setnum; i++)
@@ -682,12 +676,9 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 	int originaddr;
 	int pagei, i, j;
 
-	if (!((globaladdr + size) <= Maxmemsize)) {
-		sprintf(errstr, 
-				"Insufficient shared space! Max = 0x%x Left = 0x%lx Need = 0x%x\n",
+	if (!((globaladdr + size) <= Maxmemsize))
+		RASSERT((0 == 1), "Insufficient shared space! Max = 0x%x Left = 0x%lx Need = 0x%x\n",
 				Maxmemsize, Maxmemsize - globaladdr,size);
-		assert((0 == 1), errstr);
-	}
 
 	originaddr = globaladdr;
 	allocsize = ((size % Pagesize) == 0) ? (size) 
@@ -698,8 +689,7 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 
 	while(allocsize > 0) {
 		if (jia_pid == homepid) {
-			assert((hosts[homepid].homesize + mapsize)
-					< (Maxmempages * Pagesize), "Too many home pages");
+			RASSERT((hosts[homepid].homesize + mapsize) < (Maxmempages * Pagesize), "Too many home pages");
 			if (hostc > 1) {
 				memmap(Startaddr + globaladdr, mapsize, PROT_READ, 
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
@@ -774,9 +764,8 @@ void flushpage(int cachei)
 	unmapyes = munmap((caddr_t)cache[cachei].addr, Pagesize);
 	page[homepage(cache[cachei].addr)].state = UNMAP;
 
-	sprintf(errstr,"munmap failed at address 0x%lx, errno = %d",
+	RASSERT((unmapyes == 0), "munmap failed at address 0x%lx, errno = %d",
 			(unsigned long)cache[cachei].addr, errno);
-	assert((unmapyes == 0), errstr);
 
 	page[((unsigned long)cache[cachei].addr - Startaddr)
 		/ Pagesize].cachei = Cachepages;
@@ -906,8 +895,7 @@ void getpserver(jia_msg_t *req)
 #endif
 
 #ifdef MHPDEBUG
-	assert((req->op == GETP) && (req->topid == jia_pid),
-			"Incorrect GETP Message!");
+	RASSERT((req->op == GETP) && (req->topid == jia_pid), "Incorrect GETP Message!");
 #endif
 
 	disable_sigio_sigalrm();
@@ -992,11 +980,9 @@ void getpserver(jia_msg_t *req)
 	if (grant == Maxhosts) {  /* Change Home Info */
 
 #ifdef MHPDEBUG
-		if (!(page[pagei].state == RO)) {
-			sprintf(errstr, "Unexpected error: page[%d].state = %d\n.",
+		if (!(page[pagei].state == RO))
+			RASSERT((0 == 1), "Unexpected error: page[%d].state = %d\n.",
 					pagei, page[pagei].state);
-			assert((0 == 1), errstr);
-		}
 #endif
 
 		page[pagei].homepid = from;
@@ -1050,7 +1036,7 @@ void getpgrantserver(jia_msg_t *rep)
 #endif
 
 #ifdef MHPDEBUG
-	assert((rep->op == GETPGRANT), "Incorrect returned message!");
+	RASSERT((rep->op == GETPGRANT), "Incorrect returned message!");
 #endif
 
 	disable_sigio_sigalrm();
@@ -1145,8 +1131,7 @@ void diffserver(jia_msg_t *req)
 	disable_sigio_sigalrm();   /* don't disturb */
 
 #ifdef MHPDEBUG
-	assert((req->op == DIFF) && (req->topid == jia_pid),
-			"Incorrect DIFF Message!");
+	RASSERT((req->op == DIFF) && (req->topid == jia_pid), "Incorrect DIFF Message!");
 #endif
 
 	rep = DIFFNULL;
@@ -1172,19 +1157,16 @@ void diffserver(jia_msg_t *req)
 					}
 
 #ifdef MHPDEBUG
-					assert((page[i].oldhome == jia_pid),
-							"Diffserver(): Not Previous Home Error!\n");
+					RASSERT((page[i].oldhome == jia_pid), "Diffserver(): Not Previous Home Error!\n");
 #endif
 
 					k[0] = 0; k[1] = 0; k[2] = 0;
 					for (j = 0; j < hostc; j++) {
 
 #ifdef MHPDEBUG
-						if (!(page[i].pend[j] >= 0 && page[i].pend[j] <= 1)) {
-							sprintf(errstr, "Diffserver(): page %d, pend[%d] = %d.\n",
+						if (!(page[i].pend[j] >= 0 && page[i].pend[j] <= 1))
+							RASSERT((0 == 1), "Diffserver(): page %d, pend[%d] = %d.\n",
 									i, j, page[i].pend[j]);
-							assert((0 == 1), errstr);
-						}
 #endif
 
 						if (page[i].pend[j] == 1) {
@@ -1212,7 +1194,7 @@ void diffserver(jia_msg_t *req)
 						oaccess[j][i / CHARBITS] -= (1 << (i % CHARBITS));
 
 #ifdef MHPDEBUG
-					assert(((oaccess[j][i / CHARBITS] >> (i % CHARBITS)) % 2 == 0),
+					RASSERT(((oaccess[j][i / CHARBITS] >> (i % CHARBITS)) % 2 == 0),
 							"Diffserver(): Calculation Error on oaccess[]!\n");
 #endif
 				}
@@ -1224,11 +1206,9 @@ void diffserver(jia_msg_t *req)
 
 #ifdef MHPDEBUG
 			if (!(page[pagei].pend[req->frompid] >= 0 &&
-						page[pagei].pend[req->frompid] <= 1)) {
-				sprintf(errstr, "Diffserver() Error: page[%d].pend[%d] = %d.\n",
+						page[pagei].pend[req->frompid] <= 1))
+				RASSERT((0 == 1), "Diffserver() Error: page[%d].pend[%d] = %d.\n",
 						pagei, req->frompid, page[pagei].pend[req->frompid]);
-				assert((0 == 1), errstr);
-			}
 			if (page[pagei].homepid == req->frompid)
 				printf("Error: Home won't send out diff (code 05)\n");
 #endif
@@ -1493,7 +1473,7 @@ void diffgrantserver(jia_msg_t *rep)
 #endif
 
 #ifdef MHPDEBUG
-	assert((rep->op == DIFFGRANT), "Incorrect returned message!\n");
+	RASSERT((rep->op == DIFFGRANT), "Incorrect returned message!\n");
 #endif
 
 	index = 0;

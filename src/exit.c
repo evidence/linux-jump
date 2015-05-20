@@ -57,6 +57,7 @@
 #include "comm.h"
 #include "mem.h"
 #include "syn.h"
+#include "assert.h"
 
 extern jia_msg_t *newmsg();
 extern CommManager commreq, commrep;     
@@ -105,8 +106,7 @@ void statserver(jia_msg_t *rep)
 	jiastat_t *stat;
 	unsigned int temp;
 
-	assert((rep->op == STAT) && (rep->topid == 0), 
-			"Incorrect STAT Message!");
+	RASSERT((rep->op == STAT) && (rep->topid == 0), "Incorrect STAT Message!");
 
 	stat = (jiastat_t*)rep->data;
 	allstats[rep->frompid].msgsndbytes  = stat->msgsndbytes;
@@ -201,8 +201,7 @@ void statserver(jia_msg_t *rep)
 
 void statgrantserver(jia_msg_t *req)
 {
-	assert((req->op == STATGRANT) && (req->topid == jia_pid),
-			"Incorrect STATGRANT Message!");
+	RASSERT((req->op == STATGRANT) && (req->topid == jia_pid), "Incorrect STATGRANT Message!");
 	waitstat = 0;
 }
 #endif

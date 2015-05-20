@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "jia.h"
 #include "time.h"
+#include "assert.h"
 
 #define MAGIC       16                      /* number of slots */
 #define BIT          4                      /* 2 ^ 4 = 16 */
@@ -115,7 +116,7 @@ int main(int argc, char ** argv)
 			for (j = 0; j < element; j++) {
 				remainder = (local[j] >> (i * BIT)) % MAGIC;
 				if (count[remainder] == (slot - 1)) {
-					jia_error("Number of slots not enough, sorting aborted.\n");
+					JIA_ERROR("Number of slots not enough, sorting aborted.\n");
 				} else {  
 					temp = w_order[i % 2][remainder] * slot + count[remainder];
 					a[temp] = local[j];
