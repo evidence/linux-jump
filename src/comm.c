@@ -124,7 +124,17 @@ unsigned int intbegin;
 #endif
 
 void acqfwdserver(jia_msg_t *req);
-unsigned long reqports[Maxhosts][Maxhosts], repports[Maxhosts][Maxhosts];
+
+/**
+ * UDP ports for exchanging pages
+ */
+unsigned long reqports[Maxhosts][Maxhosts];
+
+/**
+ * UDP ports for exchanging acknowledgements
+ */
+unsigned long repports[Maxhosts][Maxhosts];
+
 CommManager commreq, commrep;
 static struct timeval polltime = { 0, 0 };
 jia_msg_t inqueue[Maxqueue], outqueue[Maxqueue];
@@ -142,26 +152,28 @@ extern void enable_sigio();
 extern sigset_t oldset;
 
 /**
- * Open socket for exchanging pages
+ * Open a UDP socket for requesting pages.
  *
+ * This function opens a UDP socket by calling socket()+bind().
+ * It also sets send and receive buffers size.
  * @param port Port for communication. 0 to get a random port.
  */
-int req_fdcreate(unsigned long port)
+int create_req_socket(unsigned long port)
 {   
 	int fd, res, size;
 	struct sockaddr_in addr;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	assert0((fd != -1), "req_fdcreate()-->socket()");
+	assert0((fd != -1), "create_req_socket()-->socket()");
 
 	/* set the buffer size for send and receive sockets */
 	size = (Maxmsgsize + Msgheadsize + 128) * 16;
 	res = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (char *)&size, sizeof(size));
-	assert0((res == 0), "req_fdcreate()-->setsockopt(): SO_RCVBUF");
+	assert0((res == 0), "create_req_socket()-->setsockopt(): SO_RCVBUF");
 
 	size = (Maxmsgsize + Msgheadsize + 128) * 16;
 	res = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof(size));
-	assert0((res == 0), "req_fdcreate()-->setsockopt(): SO_SNDBUF");
+	assert0((res == 0), "create_req_socket()-->setsockopt(): SO_SNDBUF");
 
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
@@ -169,30 +181,31 @@ int req_fdcreate(unsigned long port)
 	addr.sin_port = htons(port);
 
 	res = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
-	assert0((res == 0), "req_fdcreate()-->bind()");
+	assert0((res == 0), "create_req_socket()-->bind()");
 	return fd;
 }
 
 /**
- * Open socket for exchanging acknowledgements
+ * Open a UDP socket for exchanging acknowledgements.
  *
+ * This function opens a UDP socket by calling socket()+bind().
  * @param port Port for communication. 0 to get a random port.
  */
-int rep_fdcreate(unsigned long port)
+int create_rep_socket(unsigned long port)
 {
 	int fd, res;
 	struct sockaddr_in addr;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	assert0((fd != -1), "rep_fdcreate()-->socket()");
+	assert0((fd != -1), "create_rep_socket()-->socket()");
 
 	/* set the port for sending messages to create a channel */
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(port);
 
-	res=bind(fd, (struct sockaddr *)&addr, sizeof(addr));
-	assert0((res == 0), "rep_fdcreate()-->bind()");
+	res = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+	assert0((res == 0), "create_rep_socket()-->bind()");
 	return fd;
 }
 
@@ -293,7 +306,6 @@ void sigio_handler()
 						sizeof(inqt.seqno), 0, (struct sockaddr *)&to, sizeof(to));
 				assert0((res != -1), "sigio_handler()-->sendto() ACK");
 				if (inqt.seqno > ((signed) commreq.rcv_seq[i])) {
-
 #ifdef DOSTAT
 					if (inqt.frompid != inqt.topid) {
 						jiastat.msgrcvcnt++;
@@ -383,14 +395,14 @@ void initcomm()
 	sigaddset(&act.sa_mask, SIGALRM);
 	act.sa_flags = SA_RESTART;   /* Must be here for Linux 2.2 */
 	if (sigaction(SIGIO, &act, NULL))
-		assert0(0, "initcomm(): SIGIO problem");
+		assert0(0, "ERROR: initcomm(): SIGIO problem");
 
 	/* Set up SIGINT handler: */
 	act.sa_handler = (void_func_handler)sigint_handler;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_NODEFER;
 	if (sigaction(SIGINT, &act, NULL))
-		assert0(0, "initcomm(): SIGINT problem");
+		assert0(0, "ERROR: initcomm(): SIGINT problem");
 
 	/***********Initialize comm ports********************/
 
@@ -407,7 +419,7 @@ void initcomm()
 	FD_ZERO(&(commreq.snd_set));
 	FD_ZERO(&(commreq.rcv_set));
 	for (i = 0; i < Maxhosts; i++) { 
-		fd = req_fdcreate(reqports[jia_pid][i]);
+		fd = create_req_socket(reqports[jia_pid][i]);
 		commreq.rcv_fds[i] = fd;
 		FD_SET(fd, &commreq.rcv_set);
 		commreq.rcv_maxfd = MAX(fd+1, commreq.rcv_maxfd);
@@ -418,7 +430,7 @@ void initcomm()
 		if (0 > fcntl(commreq.rcv_fds[i], F_SETFL, FASYNC))
 			assert0(0, "initcomm()-->fcntl(..F_SETFL..)");
 
-		fd = req_fdcreate(0);
+		fd = create_req_socket(0);
 		commreq.snd_fds[i] = fd;
 		FD_SET(fd, &commreq.snd_set);
 		commreq.snd_maxfd = MAX(fd+1, commreq.snd_maxfd);
@@ -436,12 +448,12 @@ void initcomm()
 	FD_ZERO(&(commrep.rcv_set));
 
 	for(i = 0; i < Maxhosts; i++) { 
-		fd = rep_fdcreate(repports[jia_pid][i]);
+		fd = create_rep_socket(repports[jia_pid][i]);
 		commrep.rcv_fds[i] = fd;
 		FD_SET(fd, &(commrep.rcv_set));
 		commrep.rcv_maxfd = MAX(fd+1, commrep.rcv_maxfd);
 
-		fd= rep_fdcreate(0);
+		fd= create_rep_socket(0);
 		commrep.snd_fds[i] = fd;
 		FD_SET(fd, &commrep.snd_set);
 		commrep.snd_maxfd = MAX(fd+1, commrep.snd_maxfd);

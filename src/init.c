@@ -75,7 +75,7 @@ int jump_getline(int *wordc, char wordv[Maxwords][Wordsize]);
 void gethosts();
 int  mypid();
 void copyfiles(char *argv);
-void startprocs(int argc, char **argv);
+void start_slaves(int argc, char **argv);
 void jiacreat(int argc, char **argv);
 void barrier0();
 void redirstdio();
@@ -88,9 +88,16 @@ extern long Startport;
 FILE *config, *fopen();
 int jia_pid; 
 host_t hosts[Maxhosts+1];
-int hostc;                          /* host counter */
+
+/**
+ * Host counter
+ *
+ * This is the number of hosts as specified by the ~/.jiahosts file.
+ */
+int hostc;
+
 char argv0[Wordsize];
-sigset_t startup_mask;              /* used by Shi. */
+sigset_t startup_mask;
 int jia_lock_index;
 
 #ifdef DOSTAT
@@ -198,7 +205,6 @@ void gethosts()
 			hostc++; 
 		} 
 	}
-
 	assert0((hostc <= Maxhosts), "Too many hosts!");
 	fclose(config);
 }
@@ -239,24 +245,19 @@ void copyfiles(char *argv)
 	printf("Remote copy succeed!\n\n");
 }
 
-void startprocs(int argc, char **argv)
+void start_slaves(int argc, char **argv)
 {
-
-#ifdef NFS
-	char *pwd;
-#endif /* NFS*/
 	int hosti;
 	char cmd[Linesize], *hostname;
 	int i;
 
-	printf("******Start to create processes on slaves!******\n\n");
-
 #ifdef NFS
-	sprintf(errstr, "Failed to get current working directory");
+	char *pwd;
 	pwd = getenv("PWD"); 
-	assert0((pwd != NULL), errstr);
+	assert0((pwd != NULL), "Failed to get current working directory");
 #endif /* NFS */
 
+	printf("******Start to create processes on slaves!******\n\n");
 	Startport = getpid();
 	assert0( (Startport != -1), "getpid() error");
 	Startport = 10000 + (Startport * Maxhosts * Maxhosts * 4) % 10000;
@@ -282,11 +283,7 @@ void startprocs(int argc, char **argv)
 		sprintf(cmd, "%s%ld ", cmd, Startport);
 		strcat(cmd," &");
 		printf("Starting CMD %s on host %s\n", cmd, hosts[hosti].name);
-#ifdef NFS
-		system(cmd);   
-#else  
 		system(cmd);
-#endif
 		sprintf(errstr, "Fail to start process on %s!", hosts[hosti].name);
 		assert0((hosts[hosti].riofd != -1), errstr);
 	}
@@ -336,7 +333,7 @@ void jiacreat(int argc, char **argv)
 
 	if (jia_pid == 0) { 
 		sleep(1);
-		startprocs(argc, argv);
+		start_slaves(argc, argv);
 	} else {
 		int c;
 		optind = 1;
