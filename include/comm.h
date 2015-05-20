@@ -103,6 +103,9 @@ typedef struct Jia_Msg {
 
 typedef  jia_msg_t* msgp_t;
 
+/**
+ * Communication manager
+ */
 typedef struct CommManager {
 	int                 snd_fds[Maxhosts];
 	fd_set              snd_set;

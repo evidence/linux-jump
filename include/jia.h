@@ -48,7 +48,12 @@
 #ifndef JIA_PUBLIC
 #define	JIA_PUBLIC
 
-#define Maxhosts   16		/* Maximum number of hosts */
+/**
+ * Maximum number of hosts.
+ *
+ * The number of hosts found in ~/.jiahosts file cannot exceed this value.
+ */
+#define Maxhosts   16
 #define	Maxlocks   1024
 #define	Maxcondvs  64 
 #define Intbytes   4
