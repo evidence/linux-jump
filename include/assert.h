@@ -7,9 +7,10 @@ extern void asendmsg(jia_msg_t *msg);
 
 #define ASSERT(cond, ...)									\
 {												\
-	if (!cond) {										\
-		fprintf(stderr, "ASSERT ERROR Host %d: __FILE__: __LINE__\n\t", jiapid);	\
+	if (!(cond)) {										\
+		fprintf(stderr, "ASSERT ERROR Host %d: %s: %d\n\t", jiapid, __FILE__, __LINE__);	\
 		fprintf(stderr, __VA_ARGS__);							\
+		fprintf(stderr, "\n");								\
 		fflush(stderr);									\
 		fflush(stdout);									\
 		exit(-1);									\
@@ -18,7 +19,7 @@ extern void asendmsg(jia_msg_t *msg);
 
 #define RASSERT(cond, ...)							\
 {										\
-	if (!cond) {								\
+	if (!(cond)) {								\
 		jia_msg_t assertmsg;						\
 		int hosti;							\
 		assertmsg.op = JIAEXIT;						\
