@@ -3,7 +3,7 @@ SRC	= ../src
 
 .PHONY: clean
 
-OBJS 	= comm.o init.o mem.o syn.o tools.o exit.o
+OBJS 	= comm.o init.o mem.o syn.o utils.o exit.o
 
 $(TARGET):$(OBJS)
 	ar rv $(TARGET) $?
