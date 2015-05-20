@@ -6,10 +6,14 @@
 
    JUMP-linux is a Software Distributed Shared Memory (SDSM) for Linux.
 
-   It is based on JUMP (http://www.snrg.cs.hku.hk/srg/html/jump.htm) which, in
-   turn, is based on JIAJIA 1.1
+   It is based on JUMP [1] which, in turn, is based on JIAJIA 1.1.
+   According to [1] JUMP has better performance of JIAJIA either version 
+   1.1 and 2.1.
 
-   This version only supports the Linux OS and the x86 and ARM architectures.
+   This version has been modified to run only on modern Linux systems, 
+   supporting both the x86 and ARM architectures.
+
+   The copyright is specified by the COPYING file.
 
 2. Build
 
@@ -28,7 +32,11 @@
 
        <hostname> <username>
 
-4. Run
+4. Usage
+
+   Some examples of usage are available in the apps/ directory.
+
+5. Run
 
    The application binary must be put and started from <username>'s home
    directory.
@@ -41,3 +49,8 @@
         cat id_rsa.pub | ssh <user>@<machine> 'cat >> .ssh/authorized_keys'
 
    See http://www.linuxproblem.org/art_9.html
+
+
+REFERENCES
+
+[1] http://www.snrg.cs.hku.hk/srg/html/jump.htm
