@@ -25,6 +25,7 @@ extern void asendmsg(jia_msg_t *msg);
 		assertmsg.op = JIAEXIT;						\
 		assertmsg.frompid = jia_pid;					\
 		snprintf((char*) assertmsg.data, Maxmsgsize, __VA_ARGS__);	\
+		assertmsg.size = strlen((char*) assertmsg.data);			\
 		for (hosti = 0; hosti < hostc; hosti++)				\
 			if (hosti != jia_pid) {					\
 				assertmsg.topid = hosti;			\
