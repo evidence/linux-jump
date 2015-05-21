@@ -65,7 +65,8 @@ void jiaexitserver(jia_msg_t *req)
 {
 	printf("Assert error from host %d --- %s\n",
 			req->frompid, (char*)req->data);
-	fflush(stderr); fflush(stdout);
+	fflush(stderr); 
+	fflush(stdout);
 	exit(-1);
 }
 

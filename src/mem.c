@@ -272,7 +272,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 	/* We check the error register in mcontext_t.
 	   It is hardware-dependent (see /usr/include/sys/ucontext.h) */
 #ifdef ARCH_X86
-	writefault = (int)(*(unsigned *)uctx->uc_mcontext.gregs[REG_ERR] & 0x2);
+	writefault = (((unsigned int)uctx->uc_mcontext.gregs[REG_ERR]) & 0x2);
 #elif defined ARCH_ARM
 	writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
 #else
