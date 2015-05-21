@@ -11,7 +11,8 @@
    1.1 and 2.1.
 
    This version has been modified to run only on modern Linux systems, 
-   supporting both the x86 and ARM architectures.
+   supporting both the x86 and ARM architectures. Currently, it only 
+   supports 32-bit Linux distributions.
 
    The copyright is specified by the COPYING file.
 
@@ -48,9 +49,10 @@
         ssh-keygen -t rsa
         cat id_rsa.pub | ssh <user>@<machine> 'cat >> .ssh/authorized_keys'
 
-   See http://www.linuxproblem.org/art_9.html
+   See [2] for further information.
 
 
 REFERENCES
 
-[1] http://www.snrg.cs.hku.hk/srg/html/jump.htm
+  [1] http://www.snrg.cs.hku.hk/srg/html/jump.htm
+  [2] http://www.linuxproblem.org/art_9.html
