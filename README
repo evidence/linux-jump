@@ -29,6 +29,8 @@
 
        <hostname> <username> XXX
 
+       The machine itself must be the first entry.
+
    3.2 Add the enabled hosts to ~/.rhosts as well:
 
        <hostname> <username>
