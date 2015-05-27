@@ -183,9 +183,7 @@ void dislink3(int i)
 	}
 }
 
-/* Right now, the writeflag is always set to 1, which is needed for  */
-/* efficiency purpose of the migrating-home protocol in general case */
-void getpage(address_t addr, int writeflag)
+void getpage(address_t addr)
 {
 	int homeid;
 	jia_msg_t *req;
@@ -203,7 +201,8 @@ void getpage(address_t addr, int writeflag)
 	req->topid = homeid;
 	req->size = 0;
 	appendmsg(req, ltos(addr), Intbytes);
-	appendmsg(req, ltos(writeflag), Intbytes);
+	int one = 1;
+	appendmsg(req, ltos(one), Intbytes);
 
 	/* if one of the locks held by the requesting proc has accessed the */
 	/* required page before without propagating the diffs, we shouldn't */
@@ -367,7 +366,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 #ifdef JT
 				x3 = 1;
 #endif
-				getpage(faultaddr, 1);
+				getpage(faultaddr);
 			} else {
 
 #ifdef DOSTAT
@@ -409,7 +408,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 #ifdef JT
 				x3 = 1;
 #endif
-				getpage(faultaddr, 1);
+				getpage(faultaddr);
 			} else {
 				disable_sigio_sigalrm();
 				page[faultpage].pend[jia_pid] = 1;
@@ -1031,7 +1030,7 @@ void getpgrantserver(jia_msg_t *rep)
 	} else {   /* being refused to get page */
 		page[pagei].homepid = grant + Maxhosts;
 		enable_sigio();
-		getpage(addr, 1);   /* get page from new home again */
+		getpage(addr);   /* get page from new home again */
 	}
 
 #ifdef JT
