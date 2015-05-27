@@ -11,16 +11,9 @@ extern void freemsg(jia_msg_t*);
 extern void printmsg(jia_msg_t *msg,int right);
 extern void asendmsg(jia_msg_t *req);
 
-extern void insert(int i);
-extern void insert2(int i);
-extern void insert3(int i);
-extern void dislink(int i);
-extern void dislink2(int i);
-extern void dislink3(int i);
-extern short int head, head2, head3, tail, tail2, tail3;
-extern short int pendprev[Maxmempages], pendnext[Maxmempages];
-extern short int pendprev2[Maxmempages], pendnext2[Maxmempages];
-extern short int pendprev3[Cachepages], pendnext3[Cachepages];
+extern mem_llist_t	mem_llist1, mem_llist2;
+extern cache_llist_t	cache_llist;
+
 extern void disable_sigio_sigalrm();
 extern void enable_sigio();
 extern void appendmsg(jia_msg_t *msg, const void *str, int len);
@@ -525,14 +518,14 @@ void savecontext(int synop)
 	register unsigned int y1, y2, y3, y4, y5, y6, y7, y8;
 #endif
 
-	pagei = head2;
+	pagei = mem_llist2.head;
 	while(pagei != -1) {
 		if (page[pagei].state == RW)
 			page[pagei].state = RO;
-		pagei = pendnext2[pagei];
+		pagei = mem_llist2.pendnext[pagei];
 	}
 
-	cachei = head3;
+	cachei = cache_llist.head;
 	counta = 0;
 	count = 0;
 	disable_sigio_sigalrm();
@@ -542,8 +535,8 @@ void savecontext(int synop)
 		else
 			tmp3[count++] = cachei;
 		tmp = cachei;
-		cachei = pendnext3[cachei];
-		dislink3(tmp);
+		cachei = cache_llist.pendnext[cachei];
+		dislink(cache_llist, tmp);
 	}
 	locallock = top.lockid;
 	readwtnt(locks[locallock].wtntp, 3);
@@ -735,7 +728,7 @@ void savecontext(int synop)
 	}
 #endif
 
-	pagei = head2;
+	pagei = mem_llist2.head;
 	disable_sigio_sigalrm();
 	locallock = top.lockid;
 	readwtnt(locks[locallock].wtntp, 1);
@@ -801,9 +794,9 @@ void savecontext(int synop)
 		}
 #endif
 
-		tmp = pendnext2[pagei];
+		tmp = mem_llist2.pendnext[pagei];
 		page[pagei].wtnt = 0;
-		dislink2(pagei);
+		dislink(mem_llist2, pagei);
 		if (pagei == tmp) printf("Error: Infinite loop?\n");
 		pagei = tmp;
 	}
@@ -812,12 +805,12 @@ void savecontext(int synop)
 	enable_sigio();
 
 	disable_sigio_sigalrm();
-	pagei = head;
+	pagei = mem_llist1.head;
 	while (pagei != -1) {
-		tmp = pendnext[pagei];
+		tmp = mem_llist1.pendnext[pagei];
 		if (page[pagei].homepid == jia_pid) {
 			page[pagei].pend[jia_pid] = 0;
-			dislink(pagei);
+			dislink(mem_llist1, pagei);
 		}
 		if (pagei == tmp) printf("Infinite loop here!\n");
 		pagei = tmp;
@@ -1639,7 +1632,7 @@ void invalidate(jia_msg_t *req)
 					if (cache[cachei].state == RW) freetwin(cache[cachei].twin);
 					if (cache[cachei].wtnt == 1) {
 						cache[cachei].wtnt=0;
-						dislink3(cachei);
+						dislink(cache_llist, cachei);
 					}
 
 					cache[cachei].state=INV;

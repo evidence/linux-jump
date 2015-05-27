@@ -17,16 +17,12 @@ extern void enable_sigio();
 extern void disable_sigio_sigalrm();
 extern void appendmsg(jia_msg_t *msg, unsigned char *str, int len);
 
-
 int findposition(address_t addr);
 unsigned char temppage[Pagesize];
 volatile int mapped, tempcopy = 0;
 
-/* Using a new data structure (linked-list representation by array) */
-/* for faster access of page control structures			    */
-short int head, tail, pendprev[Maxmempages], pendnext[Maxmempages];
-short int head2, tail2, pendprev2[Maxmempages], pendnext2[Maxmempages];
-short int head3, tail3, pendprev3[Cachepages], pendnext3[Cachepages];
+mem_llist_t	mem_llist1, mem_llist2;
+cache_llist_t	cache_llist;
 
 unsigned int SpecialAddr;
 unsigned int oaccess[Maxlocks][LENGTH];
@@ -71,117 +67,6 @@ int repcnt[Setnum];
 
 int alloctot;
 jia_msg_t *diffmsg[Maxhosts];
-
-
-void insert(int i)
-{
-	if ((head == -1) && (tail == -1)) {
-		pendnext[i] = -1;
-		pendprev[i] = -1;
-		head = tail = i;
-	} else {
-		pendprev[i] = tail;
-		pendnext[tail] = i;
-		pendnext[i] = -1;
-		tail = i;
-	}
-}
-
-void dislink(int i)
-{
-	int p, n;
-
-	if (head == -1 && tail == -1){
-		printf("Dislink: Nothing to dislink\n");
-	} else {
-		if ((head == i) && (tail == i)) {
-			head = tail = -1;
-		} else if (head == i) {
-			head = pendnext[head];
-			pendprev[head] = -1;
-		} else 	if (tail == i) {
-			tail = pendprev[tail];
-			pendnext[tail] = -1;
-		} else { 
-			p = pendprev[i];
-			n = pendnext[i];
-			pendprev[n] = p;
-			pendnext[p] = n;
-		}
-	}
-}
-
-void insert2(int i)
-{
-	if ((head2 == -1) && (tail2 == -1)) {
-		pendnext2[i] = -1;
-		pendprev2[i] = -1;
-		head2 = tail2 = i;
-	} else {
-		pendprev2[i] = tail2;
-		pendnext2[tail2] = i;
-		pendnext2[i] = -1;
-		tail2 = i;
-	}
-}
-
-void dislink2(int i)
-{
-	int p, n;
-
-	if (head2 == -1 && tail2 == -1) {
-		printf("Dislink2: Nothing to dislink2\n");
-	} else if (head2 == i && tail2 == i) {
-		head2 = tail2 = -1;
-	} else if (head2 == i) {
-		head2 = pendnext2[head2];
-		pendprev2[head2] = -1;
-	} else if (tail2 == i) {
-		tail2 = pendprev2[tail2];
-		pendnext2[tail2] = -1;
-	} else { 
-		p = pendprev2[i];
-		n = pendnext2[i];
-		pendprev2[n] = p;
-		pendnext2[p] = n;
-	}
-}
-
-void insert3(int i)
-{
-	if (head3 == -1 && tail3 == -1) {
-		pendnext3[i] = -1;
-		pendprev3[i] = -1;
-		head3 = tail3 = i;
-	} else {
-		pendprev3[i] = tail3;
-		pendnext3[tail3] = i;
-		pendnext3[i] = -1;
-		tail3 = i;
-	}
-}
-
-void dislink3(int i)
-{
-	int p, n;
-
-	if (head3 == -1 && tail3 == -1) {
-		printf("Dislink3: Nothing to dislink3\n");
-	} else if (head3 == i && tail3 == i) {
-		head3 = tail3 = -1;
-	} else if (head3 == i) {
-		head3 = pendnext3[head3];
-		pendprev3[head3] = -1;
-	} else if (tail3 == i) {
-		tail3 = pendprev3[tail3];
-		pendnext3[tail3] = -1;
-	} else { 
-		p = pendprev3[i];
-		n = pendnext3[i];
-		pendprev3[n] = p;
-		pendnext3[p] = n;
-	}
-}
 
 void getpage(address_t addr)
 {
@@ -303,7 +188,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 		memprotect((caddr_t)faultaddr, Pagesize, PROT_READ | PROT_WRITE);
 		if (page[faultpage].wtnt == 0) {
 			page[faultpage].wtnt = 1;
-			insert2(faultpage);
+			insert(mem_llist2, faultpage);
 		}
 		temp = page[faultpage].oldhome;
 
@@ -323,7 +208,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 
 				if (page[faultpage].pend[jia_pid] == 0) {
 					page[faultpage].pend[jia_pid]++;
-					insert(faultpage);
+					insert(mem_llist1, faultpage);
 				} else {
 					printf("Logic bug: Page %d already pended %d\n", faultpage,
 							page[faultpage].pend[jia_pid]);
@@ -412,7 +297,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 			} else {
 				disable_sigio_sigalrm();
 				page[faultpage].pend[jia_pid] = 1;
-				insert(faultpage);
+				insert(mem_llist1, faultpage);
 				enable_sigio();
 
 #ifdef MHPDEBUG
@@ -446,7 +331,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 				disable_sigio_sigalrm();
 				if (cache[cachei].wtnt == 1) {
 					cache[cachei].wtnt = 0;
-					dislink3(cachei);
+					dislink(cache_llist, cachei);
 				}
 				enable_sigio();
 
@@ -457,7 +342,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 				disable_sigio_sigalrm();
 				if (page[faultpage].wtnt == 0) {
 					page[faultpage].wtnt = 1;
-					insert2(faultpage);
+					insert(mem_llist2, faultpage);
 				}
 				enable_sigio();
 				flaggy = 0;
@@ -465,7 +350,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 				disable_sigio_sigalrm();
 				if (cache[cachei].wtnt == 0) {
 					cache[cachei].wtnt = 1;
-					insert3(cachei);
+					insert(cache_llist, cachei);
 				}
 				enable_sigio();
 				flaggy = 1;
@@ -490,7 +375,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 				disable_sigio_sigalrm();
 				if (cache[cachei].wtnt == 1) {
 					cache[cachei].wtnt = 0;
-					dislink3(cachei);
+					dislink(cache_llist, cachei);
 				}
 				enable_sigio();
 
@@ -502,7 +387,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 				disable_sigio_sigalrm();
 				if (cache[cachei].wtnt == 0) {
 					cache[cachei].wtnt = 1;
-					insert3(cachei);
+					insert(cache_llist, cachei);
 				}
 				enable_sigio();
 				flaggy = 1;
@@ -548,7 +433,13 @@ void initmem()
 	/* SpecialAddr specifies the start of migration notices */
 
 	numberofpages = 0;
-	head = head2 = head3 = tail = tail2 = tail3 = -1;
+	mem_llist1.head = -1;
+	mem_llist1.tail = -1;
+	mem_llist2.head = -1;
+	mem_llist2.tail = -1;
+	cache_llist.head = -1;
+	cache_llist.tail = -1;
+
 
 	for (i = 0; i <= hostc; i++) {
 		hosts[i].homesize = 0;
@@ -714,7 +605,7 @@ void flushpage(int cachei)
 	disable_sigio_sigalrm();
 	if (cache[cachei].wtnt == 1) {
 		cache[cachei].wtnt=0;
-		dislink3(cachei);
+		dislink(cache_llist, cachei);
 	}
 	enable_sigio();
 
@@ -992,13 +883,13 @@ void getpgrantserver(jia_msg_t *rep)
 			page[pagei].oldhome = rep->frompid;
 			if (page[pagei].pend[jia_pid] == 0) {
 				page[pagei].pend[jia_pid]++;
-				insert(pagei);
+				insert(mem_llist1, pagei);
 			} else {
 				printf("Flaw: Page %d already pended\n", pagei);
 			}
 			if (page[pagei].wtnt == 0) {
 				page[pagei].wtnt = 1;
-				insert2(pagei);
+				insert(mem_llist2, pagei);
 			}
 
 			page[pagei].rdnt = 1;
@@ -1112,7 +1003,7 @@ void diffserver(jia_msg_t *req)
 							disable_sigio_sigalrm();
 							page[i].pend[j] = 0;
 							if (j == jia_pid) {
-								dislink(i);
+								dislink(mem_llist1, i);
 							}
 							enable_sigio();
 						}
@@ -1334,7 +1225,7 @@ void savehomechange()   /* New Function */
 		}
 	while(diffwait);    /* Do this Better? */
 
-	i = head;
+	i = mem_llist1.head;
 	while (i != -1) {
 
 #ifdef MHPDEBUG
@@ -1387,7 +1278,7 @@ void savehomechange()   /* New Function */
 				while(diffwait);   /* Really OK ? */
 			}
 		}
-		i = pendnext[i];
+		i = mem_llist1.pendnext[i];
 	}
 
 #ifdef JT
