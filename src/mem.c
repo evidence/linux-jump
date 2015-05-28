@@ -1319,9 +1319,8 @@ void diffgrantserver(jia_msg_t *rep)
 			if (r) {
 				if (j == jia_pid)
 					printf("Error: Home myself should be 0 (code 07)\n");
-				else {
+				else
 					page[i].pend[j]++;
-				}
 			}
 		}
 		page[i].oldhome = Maxhosts;
@@ -1344,8 +1343,14 @@ void diffgrantserver(jia_msg_t *rep)
 
 #else  /* NULL_LIB */
 
+/**
+ * Allocate bytes at multiples of the page size.
+ *
+ * @param size Number of bytes to be allocated
+ */
 unsigned long jia_alloc(int size)
 {
+	/* FIXME: valloc is deprecated */
 	return (unsigned long) valloc(size);
 }
 #endif /* NULL_LIB */

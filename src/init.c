@@ -13,6 +13,7 @@ extern void disable_sigio_sigalrm();
 extern void enable_sigio();       
 extern unsigned long jia_current_time();
 extern unsigned int get_usecs();
+extern long Startport;
 
 int jump_getline(int *wordc, char wordv[Maxwords][Wordsize]);
 void gethosts();
@@ -25,16 +26,21 @@ void redirstdio();
 void jia_init(int argc, char **argv);
 void clearstat();
 
-extern long Startport;
 
 FILE *config, *fopen();
 int jia_pid; 
+
+/**
+ * Hosts
+ *
+ * This is the list f hosts specified by the ~/.jiahosts file.
+ */
 host_t hosts[Maxhosts+1];
 
 /**
  * Host counter
  *
- * This is the number of hosts as specified by the ~/.jiahosts file.
+ * This is the total number of hosts specified by the ~/.jiahosts file.
  */
 int hostc;
 
