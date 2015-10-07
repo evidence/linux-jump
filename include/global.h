@@ -37,6 +37,16 @@ typedef void (* void_func_handler)();
 	printf("\t\t\t"); 	\
 }
 
+#ifdef PDEBUG
+#define _dprintf(_fmt, ... )                             \
+    do {                                                \
+    fprintf(stderr, "%s():%d - " _fmt "%s\n",              \
+            __func__, __LINE__, __VA_ARGS__);         \
+    } while (0);
+#define dprintf(...) _dprintf(__VA_ARGS__, "")
+#else
+#define dprintf(...) do {} while(0);
+#endif
 
 /* Using a new data structure (linked-list representation by array) */
 /* for faster access of page control structures			    */

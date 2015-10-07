@@ -459,6 +459,7 @@ void outsend()
 				BEGINCS;
 				res=sendto(commreq.snd_fds[toproc], (char *)&(outqh),msgsize, 0,
 						(struct sockaddr *)&to, sizeof(to));
+				dprintf("sendto res = %d seq=%d", res, outqh.seqno);
 				ASSERT((res != -1), "outsend()-->sendto()");
 				ENDCS;
 			}
@@ -494,6 +495,7 @@ void outsend()
 					s= sizeof(from);
 					res = recvfrom(commrep.rcv_fds[toproc], (char *)&rep, Intbytes,0,
 							(struct sockaddr *)&from, &s);
+					dprintf("recvfrom res = %d seq=%d", res, rep);
 					ENDCS;
 				} while ((res < 0) && (errno == EINTR));
 
