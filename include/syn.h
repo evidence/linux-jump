@@ -6,6 +6,7 @@
 #define hidelock     (Maxlocks + Maxcondvs)
 #define top          lockstack[stackptr]
 #define stol(x)      (*((unsigned long *)(x)))
+#define stoi(x)      (*((unsigned int *)(x)))
 #define ltos(x)      ((unsigned char *)(&(x)))
 #define sbit(s,n)    ((s[(n)/8]) |= ((unsigned char)(0x1 << ((n) % 8))))
 #define cbit(s,n)    ((s[(n)/8]) &= (~((unsigned char)(0x1 << ((n) % 8)))))

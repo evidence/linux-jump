@@ -24,7 +24,7 @@ volatile int mapped, tempcopy = 0;
 mem_llist_t	mem_llist1, mem_llist2;
 cache_llist_t	cache_llist;
 
-unsigned int SpecialAddr;
+unsigned long SpecialAddr;
 unsigned int oaccess[Maxlocks][LENGTH];
 
 extern int jia_pid;
@@ -85,7 +85,7 @@ void getpage(address_t addr)
 	req->frompid = jia_pid;
 	req->topid = homeid;
 	req->size = 0;
-	appendmsg(req, ltos(addr), Intbytes);
+	appendmsg(req, ltos(addr), Longbytes);
 	int one = 1;
 	appendmsg(req, ltos(one), Intbytes);
 
@@ -115,7 +115,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 {
 	address_t faultaddr;
 	int writefault, cachei, temp, flaggy;
-	unsigned int faultpage;
+	unsigned long faultpage;
 	sigset_t set, oldset;
 	ucontext_t *uctx = (ucontext_t *) context;
 	if (sig != SIGSEGV)
@@ -163,7 +163,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 	#error "No architecture specified!"
 #endif
 
-	faultpage = (unsigned int) homepage(faultaddr);
+	faultpage = (unsigned long) homepage(faultaddr);
 	RASSERT((((unsigned long)faultaddr < (Startaddr + globaladdr)) && 
 				((unsigned long)faultaddr >= Startaddr)), 
 				"Access shared memory out of range from 0x%x to 0x%lx!, faultaddr = 0x%lx, writefault = 0x%x", Startaddr,
@@ -210,7 +210,7 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 					page[faultpage].pend[jia_pid]++;
 					insert(mem_llist1, faultpage);
 				} else {
-					printf("Logic bug: Page %d already pended %d\n", faultpage,
+					printf("Logic bug: Page %ld already pended %d\n", faultpage,
 							page[faultpage].pend[jia_pid]);
 				}
 			}
@@ -682,10 +682,10 @@ int findposition(address_t addr)
 
 
 /* we may do this inline for faster access */
-unsigned long s2l(unsigned char *str)
+unsigned int s2i(unsigned char *str)
 {
 	union {
-		unsigned long l;
+		unsigned int l;
 		unsigned char c[Intbytes];
 	} notype;
 
@@ -693,6 +693,21 @@ unsigned long s2l(unsigned char *str)
 	notype.c[1] = str[1];
 	notype.c[2] = str[2];
 	notype.c[3] = str[3];
+	return(notype.l);
+}
+
+unsigned long s2l(unsigned char *str)
+{
+	union {
+		unsigned long l;
+		unsigned char c[Longbytes];
+	} notype;
+	unsigned int i;
+
+        for (i = 0; i < Longbytes; i++) {
+	    notype.c[i] = str[i];
+        }
+
 	return(notype.l);
 }
 
@@ -730,9 +745,9 @@ void getpserver(jia_msg_t *req)
 	disable_sigio_sigalrm();
 
 	paddr = (address_t)stol(req->data);
-	writeflag = (int)s2l(req->data + Intbytes);
+	writeflag = (int)s2i(req->data + Longbytes);
 	from = (int)(req->frompid);
-	index = 2 * Intbytes;
+	index = Longbytes + Intbytes; /* paddr + writeflag */
 
 	/* calculate page ID */
 	pagei = (unsigned long int)(paddr - Startaddr) / Pagesize;
@@ -743,7 +758,7 @@ void getpserver(jia_msg_t *req)
 	/* (grant < 0) means refuse to send page copy			*/
 	/* (grant + Maxhosts) indicates the home			*/
 	grant = Maxhosts;
-	count = (int)s2l(req->data + index);
+	count = (int)s2i(req->data + index);
 	index += Intbytes;
 
 	if (count == 1 && page[pagei].oldhome == jia_pid) {
@@ -836,7 +851,7 @@ void getpserver(jia_msg_t *req)
 	rep->frompid=jia_pid;
 	rep->topid=req->frompid;
 	rep->size=0;
-	appendmsg(rep, req->data, Intbytes);
+	appendmsg(rep, req->data, Longbytes);
 	appendmsg(rep, ltos(grant), Intbytes);
 	if (grant >= 0)
 		appendmsg(rep, paddr, Pagesize);
@@ -875,7 +890,7 @@ void getpgrantserver(jia_msg_t *rep)
 	/* Compute page ID */
 	pagei = (unsigned long int)(addr - Startaddr) / Pagesize;
 
-	grant = (int)s2l(rep->data + Intbytes);
+	grant = (int)s2i(rep->data + Longbytes);
 
 	if (grant >= 0) {
 		if (grant == Maxhosts) {  /* Successfully Getting the Home */
@@ -898,8 +913,8 @@ void getpgrantserver(jia_msg_t *rep)
 			page[pagei].homepid = grant;
 		}
 
-		datai += Intbytes;
-		datai += Intbytes;
+		datai += Longbytes; /* addr */
+		datai += Intbytes; /* grant */
 
 		/* set oaccess[] field of this page to all holding locks */ 
 		for (i = 1; i <= stackptr; i++) {
@@ -939,9 +954,9 @@ void diffserver(jia_msg_t *req)
 	int pagei;
 	unsigned short int i, j, k[3];
 	unsigned long paddr;
-	unsigned long pstop;
-	unsigned long doffset;
-	unsigned long dsize;
+	unsigned int pstop;
+	unsigned int doffset;
+	unsigned int dsize;
 	jia_msg_t *rep;
 
 #ifdef DOSTAT
@@ -967,7 +982,7 @@ void diffserver(jia_msg_t *req)
 	datai = 0;
 	while (datai < req->size) {
 		paddr = s2l(req->data + datai);
-		datai += Intbytes;
+		datai += Longbytes;
 		if (paddr == SpecialAddr) {   /* Start of Migration notice */
 			rep = newmsg();
 			rep->op = DIFFGRANT;
@@ -1047,11 +1062,11 @@ void diffserver(jia_msg_t *req)
 			memprotect((caddr_t)paddr, Pagesize, PROT_READ | PROT_WRITE);
 
 			/* decode diff and apply to master copy of page */
-			pstop = s2l(req->data + datai) + datai - Intbytes;
-			datai += Intbytes;
+			pstop = s2i(req->data + datai) + datai - Longbytes;
+			datai += Intbytes; /* size */
 			while(datai < (int) pstop) {
-				dsize = s2l(req->data + datai) & 0xffff;
-				doffset = (s2l(req->data + datai) >> 16) & 0xffff;
+				dsize = s2i(req->data + datai) & 0xffff;
+				doffset = (s2i(req->data + datai) >> 16) & 0xffff;
 				datai += Intbytes;
 				memcpy((address_t)(paddr + doffset), req->data + datai, dsize);
 				datai += dsize;
@@ -1096,7 +1111,7 @@ void diffserver(jia_msg_t *req)
 int encodediff(int cachei, unsigned char* diff, int dflag)
 {
 	int size, bytei;
-	unsigned long cnt, start, header;
+	unsigned int cnt, start, header;
 
 #ifdef DOSTAT
 	register unsigned int begin;
@@ -1112,9 +1127,9 @@ int encodediff(int cachei, unsigned char* diff, int dflag)
 #endif
 
 	size = 0;
-	memcpy(diff + size, ltos(cache[cachei].addr), Intbytes);
-	size += Intbytes;
-	size += Intbytes;
+	memcpy(diff + size, ltos(cache[cachei].addr), Longbytes);
+	size += Longbytes;
+	size += Intbytes; /* space to store the size */
 
 	bytei = 0;
 
@@ -1123,8 +1138,8 @@ int encodediff(int cachei, unsigned char* diff, int dflag)
 			for (; (bytei<Pagesize) && (memcmp(cache[cachei].addr + bytei,
 							cache[cachei].twin + bytei, Diffunit) == 0); bytei += Diffunit);
 			if (bytei < Pagesize) {
-				cnt = (unsigned long) 0;
-				start = (unsigned long) bytei;
+				cnt = (unsigned int) 0;
+				start = (unsigned int) bytei;
 				for (; (bytei<Pagesize) && (memcmp(cache[cachei].addr + bytei,
 								cache[cachei].twin + bytei, Diffunit) != 0); bytei += Diffunit)
 					cnt += Diffunit;
@@ -1138,7 +1153,7 @@ int encodediff(int cachei, unsigned char* diff, int dflag)
 		}
 	}     /* if */
 
-	memcpy(diff + Intbytes, ltos(size), Intbytes);    /* fill size */
+	memcpy(diff + Longbytes, ltos(size), Intbytes);    /* fill size */
 
 #ifdef DOSTAT
 	jiastat.endifftime += get_usecs() - begin;
@@ -1218,7 +1233,7 @@ void savehomechange()   /* New Function */
 
 	for (i = 0; i < hostc; i++)
 		if (diffmsg[i] != DIFFNULL && 
-				diffmsg[i]->size + Intbytes + 2 * Shortbytes > Maxmsgsize) {
+				diffmsg[i]->size + Longbytes + 2 * Shortbytes > Maxmsgsize) {
 			diffwait++;
 			asendmsg(diffmsg[i]);
 			diffmsg[i]->size = 0;
@@ -1246,7 +1261,7 @@ void savehomechange()   /* New Function */
 							diffmsg[j]->topid = j;
 							diffmsg[j]->size = 0;
 						}
-						appendmsg(diffmsg[j], ltos(SpecialAddr), Intbytes);
+						appendmsg(diffmsg[j], ltos(SpecialAddr), Longbytes);
 					}
 				count = 1;
 			}
@@ -1257,7 +1272,7 @@ void savehomechange()   /* New Function */
 						diffwait++;
 						asendmsg(diffmsg[j]);
 						diffmsg[j]->size = 0;
-						appendmsg(diffmsg[j], ltos(SpecialAddr), Intbytes);
+						appendmsg(diffmsg[j], ltos(SpecialAddr), Longbytes);
 						scount = 1;
 					}
 					if (page[i].oldhome == j) {

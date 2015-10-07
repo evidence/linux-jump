@@ -11,6 +11,8 @@
 #define	Maxcondvs  64 
 #define Intbytes   4
 #define Intbits    32
+#define Longbytes  sizeof(long int)
+#define Longbits   Longbytes * 8
 #define Shortbytes 2
 #define Pagesize   4096
 

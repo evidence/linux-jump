@@ -238,7 +238,7 @@ void sigio_handler()
 						hosts[inqt.frompid].addrlen);
 				to.sin_port = htons(repports[inqt.frompid][inqt.topid]);
 				res = sendto(commrep.snd_fds[i], (char *)&(inqt.seqno),
-						sizeof(inqt.seqno), 0, (struct sockaddr *)&to, sizeof(to));
+						Intbytes, 0, (struct sockaddr *)&to, sizeof(to));
 				ASSERT((res != -1), "sigio_handler()-->sendto() ACK");
 				if (inqt.seqno > ((signed) commreq.rcv_seq[i])) {
 #ifdef DOSTAT

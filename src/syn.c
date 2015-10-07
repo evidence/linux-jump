@@ -1592,7 +1592,7 @@ void invalidate(jia_msg_t *req)
 	int lock;
 	int datai;
 	address_t addr;
-	int pagei;
+	unsigned int pagei;
 	int i, count, index;
 
 #ifdef JT
@@ -1620,8 +1620,8 @@ void invalidate(jia_msg_t *req)
 	readwtnt(locks[lock].wtntp, 5);
 
 	for (datai = index; datai < req->size; datai += Intbytes) {
-		pagei = (int)stol(req->data + datai);
-		addr = (address_t)(Startaddr + pagei * Pagesize);
+		pagei = stoi(req->data + datai);
+		addr = (address_t)((address_t)(Startaddr) + pagei * Pagesize);
 		if (lock < Maxlocks + Maxcondvs)
 			savewtnt(locks[lock].wtntp, pagei, Maxhosts);
 		if (page[pagei].homepid != jia_pid) {
