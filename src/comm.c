@@ -416,7 +416,7 @@ void outsend()
 
 	if (toproc == fromproc) {
 		BEGINCS;
-		ASSERT((incount <= Maxqueue), "outsend(): Inqueue exceeded!");
+		ASSERT((incount < Maxqueue), "outsend(): Inqueue exceeded!");
 		commreq.rcv_seq[toproc] = outqh.seqno;
 		memcpy(&(inqt), &(outqh), Msgheadsize + outqh.size);
 		debugmsg(&(inqt), 1);
