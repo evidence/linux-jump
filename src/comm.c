@@ -405,7 +405,7 @@ void outsend()
 	unsigned long start, end, mytimeout;
 	int msgsize;
 	socklen_t s;
-	int sendsuccess,arrived;
+	int sendsuccess, arrived, old_ack;
 	fd_set readfds;
 	int servemsg;
 
@@ -452,15 +452,19 @@ void outsend()
 
 		retries_num = 0;
 		sendsuccess = 0;
+		old_ack = 0;
 
 		while ((retries_num < MAX_RETRIES) && (sendsuccess != 1)) {
-			BEGINCS;
-			res=sendto(commreq.snd_fds[toproc], (char *)&(outqh),msgsize, 0,
-					(struct sockaddr *)&to, sizeof(to));
-			ASSERT((res != -1), "outsend()-->sendto()");
-			ENDCS;
+			if (!old_ack) {
+				BEGINCS;
+				res=sendto(commreq.snd_fds[toproc], (char *)&(outqh),msgsize, 0,
+						(struct sockaddr *)&to, sizeof(to));
+				ASSERT((res != -1), "outsend()-->sendto()");
+				ENDCS;
+			}
 
 			arrived = 0;
+			old_ack = 0;
 
 			/* This is added to avoid Ethernet packet collision */
 			/* every machine (16) has a different timeout value */
@@ -495,8 +499,12 @@ void outsend()
 
 				if ((res != -1) && (rep == outqh.seqno))
 					sendsuccess=1;
-				else
-					printf("send problem: res = %d, rep = %d\n", res, rep);
+				else if (rep != outqh.seqno) {
+					old_ack = 1;
+					continue;
+				} else
+					printf("send problem: res = %d, rep = %d, outqh.seqno = %d\n",
+							res, rep, outqh.seqno);
 				break;
 			}
 
