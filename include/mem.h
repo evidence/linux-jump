@@ -24,6 +24,7 @@
 
 #define   homehost(addr) page[((unsigned long)(addr)-Startaddr)/Pagesize].homepid
 #define   homepage(addr) ((unsigned long)(addr)-Startaddr)/Pagesize
+#define   pageaddr(addr) ((unsigned long)(addr) & ~(Pagesize - 1))
 
 #define   memprotect(argx, argy, argz)							\
 {											\

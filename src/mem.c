@@ -152,7 +152,8 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 	sigaddset(&set, SIGIO);
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
 
-	faultaddr = (address_t) sip->si_addr;
+	faultaddr = (address_t) pageaddr(sip->si_addr);
+	dprintf("faultaddr=0x%lx, pageaddr=0x%lx", (unsigned long) sip->si_addr, (unsigned long) faultaddr);
 	/* We check the error register in mcontext_t.
 	   It is hardware-dependent (see /usr/include/sys/ucontext.h) */
 #ifdef ARCH_X86
@@ -502,7 +503,7 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 	int homepid;
 	int mapsize;
 	int allocsize;
-	int originaddr;
+	unsigned long originaddr;
 	int pagei, i, j;
 
 	if (!((globaladdr + size) <= Maxmemsize))
@@ -516,6 +517,9 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 		: ((block / Pagesize + 1) * Pagesize); 
 	homepid = starthost;
 
+	dprintf("size=%d, block=%d, starthost=%d, globaladdr=%lu",
+			size, block, starthost, globaladdr);
+
 	while(allocsize > 0) {
 		if (jia_pid == homepid) {
 			RASSERT((hosts[homepid].homesize + mapsize) < (Maxmempages * Pagesize), "Too many home pages");
@@ -525,10 +529,6 @@ unsigned long jia_alloc3(int size, int block, int starthost)
 			} else {
 				memmap(Startaddr + globaladdr, mapsize, PROT_READ | PROT_WRITE,
 						MAP_PRIVATE | MAP_FIXED, jiamapfd, 0);
-			}
-			for (i = 0; i < mapsize; i += Pagesize) {
-				pagei = (globaladdr + i) / Pagesize;
-				page[pagei].addr = (address_t)(Startaddr + globaladdr + i);
 			}
 		}
 
