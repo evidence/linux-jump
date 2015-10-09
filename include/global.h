@@ -38,11 +38,14 @@ typedef void (* void_func_handler)();
 }
 
 #ifdef PDEBUG
-#define _dprintf(_fmt, ... )                             \
-    do {                                                \
-    fprintf(stderr, "%s():%d - " _fmt "%s\n",              \
-            __func__, __LINE__, __VA_ARGS__);         \
-    } while (0);
+#define _dprintf(_fmt, ... )\
+	do {								\
+		struct timeval _t0;					\
+		gettimeofday(&_t0, NULL);				\
+		fprintf(stderr, "%03d.%06d %s():%d - " _fmt "%s\n",	\
+			(int)(_t0.tv_sec % 1000), (int)_t0.tv_usec,	\
+			__func__, __LINE__, __VA_ARGS__);		\
+	} while (0);
 #define dprintf(...) _dprintf(__VA_ARGS__, "")
 #else
 #define dprintf(...) do {} while(0);

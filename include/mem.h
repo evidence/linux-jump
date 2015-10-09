@@ -42,7 +42,8 @@
 	caddr_t mapad;										\
 	mapad=mmap((caddr_t)(arg1),(size_t)(arg2),(arg3),(arg4),(arg5),(arg6));			\
 	if (mapad != (caddr_t)(arg1))								\
-		RASSERT(0, "mmap failed! addr=0x%lx, errno=%d",(unsigned long)(arg1),errno);	\
+		RASSERT(0, "mmap failed! addr=0x%lx, mapad=0x%lx, size=%d, fd=%ld, errno=%d",\
+				(unsigned long)(arg1), (unsigned long)(mapad), arg2, arg5, errno);\
 }
 
 typedef unsigned char* address_t; 
