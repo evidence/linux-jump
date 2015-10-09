@@ -130,11 +130,11 @@ int main(int argc, char ** argv)
 
 	gettime(&time5);
 
-	printf("Partial time 1:\t\t %ld sec\n", time_diff_sec(&time2, &time1));
-	printf("Partial time 2 (parallel):\t %ld sec\n", time_diff_sec(&time3, &time2));
-	printf("Partial time 3:\t\t %ld sec\n", time_diff_sec(&time4, &time3));
-	printf("Partial time 4:\t\t %ld sec\n", time_diff_sec(&time5, &time4));
-	printf("Total time:\t\t %ld sec\n", time_diff_sec(&time5, &time1));
+	printf("Partial time 1:\t\t %ld msec\n", time_diff_msec(&time2, &time1));
+	printf("Partial time 2 (parallel):\t %ld msec\n", time_diff_msec(&time3, &time2));
+	printf("Partial time 3:\t\t %ld msec\n", time_diff_msec(&time4, &time3));
+	printf("Partial time 4:\t\t %ld msec\n", time_diff_msec(&time5, &time4));
+	printf("Total time:\t\t %ld msec\n", time_diff_msec(&time5, &time1));
 
 
 	jia_exit();
