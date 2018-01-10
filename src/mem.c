@@ -161,9 +161,24 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 #elif defined(__arm__)
 	writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
 #elif defined(__aarch64__)
-	#error "Not implemented!"
+        /* Find ESR register in the reserved part of the fault context */
+	struct _aarch64_ctx *ctx = &uctx->uc_mcontext.__reserved[0];
+	int off = 0;
+	writefault = -1;
+
+	while (ctx->magic != 0 && off < 4096) {
+		if (ctx->magic == ESR_MAGIC) {
+			writefault = (((struct esr_context *)ctx)->esr & (1ull << 11) >> 11);
+			break;
+		}
+
+		off += ctx->size;
+		ctx = &uctx->uc_mcontext.__reserved[off];
+	}
+
+	RASSERT((writefault != -1), "ESR not found in the fault context");
 #else
-	#error "No architecture specified!"
+	#error "Architecture not supported!"
 #endif
 
 	faultpage = (unsigned long) homepage(faultaddr);
