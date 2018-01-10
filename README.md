@@ -11,18 +11,15 @@ According to [1] JUMP has better performance of JIAJIA either version 1.1 and
 2.1.
 
 This version has been modified to run only on modern Linux systems, supporting
-both the x86 and ARM architectures. Currently, it only supports 32-bit Linux
-distributions. The porting activity has been done in the context of the AXIOM
-EU project [2].
+i386, x86_64, ARM and ARM64 architectures. The porting activity has been done
+in the context of the AXIOM EU project [2].
 
 The copyright is specified by the COPYING file.
 
 Build
 -----
 
-Edit the ```ARCH_FLAGS``` variable in the main ```Makefile``` and either add
-```-DARCH_X86``` or ```-DARCH_ARM``` based on your specific platform.
-Then, type
+To build type:
 
 	make
 

@@ -156,10 +156,12 @@ void sigsegv_handler (int sig, siginfo_t *sip, void *context)
 	dprintf("faultaddr=0x%lx, pageaddr=0x%lx", (unsigned long) sip->si_addr, (unsigned long) faultaddr);
 	/* We check the error register in mcontext_t.
 	   It is hardware-dependent (see /usr/include/sys/ucontext.h) */
-#ifdef ARCH_X86
+#if defined(__x86_64__) || defined(__i386__)
 	writefault = (((unsigned int)uctx->uc_mcontext.gregs[REG_ERR]) & 0x2);
-#elif defined ARCH_ARM
+#elif defined(__arm__)
 	writefault = (((unsigned int)uctx->uc_mcontext.error_code & (1<<11)) >> 11);
+#elif defined(__aarch64__)
+	#error "Not implemented!"
 #else
 	#error "No architecture specified!"
 #endif
